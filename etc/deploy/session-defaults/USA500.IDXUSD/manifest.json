@@ -1,0 +1,17 @@
+{
+    "instrument":"USA500.IDX/USD",
+    "description":"USA 500 Index",
+    "pips_digit":2,
+    "trade_time_frame" : {
+        "Mon":"00:00:00.000-23:59:59.999",
+        "Tue":"00:00:00.000-23:59:59.999",
+        "Wed":"00:00:00.000-23:59:59.999",
+        "Thu":"00:00:00.000-23:59:59.999",
+        "Fri":"00:00:00.000-23:59:59.999",
+        "Sat":"never"
+    },
+    "handler":"dummy",
+    "handler_options": {
+        "dummy":0
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "instrument":"USD/CNH",
+    "description":"US Dollar vs Offshore Chinese Renminbi",
+    "pips_digit":4,
+    "trade_time_frame" : {
+        "Mon":"00:00:00.000-23:59:59.999",
+        "Tue":"00:00:00.000-23:59:59.999",
+        "Wed":"00:00:00.000-23:59:59.999",
+        "Thu":"00:00:00.000-23:59:59.999",
+        "Fri":"00:00:00.000-23:59:59.999",
+        "Sat":"never"
+    },
+    "handler":"dummy",
+    "handler_options": {
+        "dummy":0
+    }
+}
