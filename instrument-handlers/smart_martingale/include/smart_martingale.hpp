@@ -41,7 +41,9 @@ private:
     void continue_long_position(int bid_pips, hft::protocol::response &market);
     void continue_short_position(int ask_pips, hft::protocol::response &market);
 
-    int compute_num_of_contracts(double equity) const;
+    int compute_initial_num_of_contracts(double free_margin) const;
+    int compute_current_num_of_contracts(double free_margin) const;
+
     double get_current_money_lost(int pips_lost) const;
     double get_extra_contracts(void) const;
 
@@ -54,10 +56,11 @@ private:
     double microlot_value_commission_;
     int trade_pips_limit_;
     int max_martingale_depth_;
-    int num_of_contracts_;
+    int max_spread_;
+    double contracts_a_;
+    double contracts_b_;
 
     virtual_player vplayer_;
-
 };
 
 } /* namespace hft_ih_plugin */

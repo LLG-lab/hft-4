@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -308,8 +308,6 @@ static tick make_tick(boost::json::object const &obj)
         throw violation_error("Invalid ask attribute type for method tick");
     }
 
-
-
     //
     // Obtain bid.
     //
@@ -360,6 +358,30 @@ static tick make_tick(boost::json::object const &obj)
     else
     {
         throw violation_error("Invalid equity attribute type for method tick");
+    }
+
+    //
+    // Obtain free_margin.
+    //
+
+    if (! obj.contains("free_margin"))
+    {
+        throw violation_error("Missing free_margin attribute for method tick");
+    }
+
+    value const &v_free_margin = obj.at("free_margin");
+
+    if (v_free_margin.kind() == kind::double_)
+    {
+        ret.free_margin = v_free_margin.get_double();
+    }
+    else if (v_free_margin.kind() == kind::int64)
+    {
+        ret.free_margin = v_free_margin.get_int64();
+    }
+    else
+    {
+        throw violation_error("Invalid free_margin attribute type for method tick");
     }
 
     return ret;

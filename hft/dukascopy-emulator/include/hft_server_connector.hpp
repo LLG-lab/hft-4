@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -28,19 +28,20 @@ public:
 
     hft_server_connector(void) = delete;
 
-    hft_server_connector(const std::string &host, const std::string &port,
-                             const std::string &instrument, const std::string &sessid);
+    hft_server_connector(const std::string &host, const std::string &port);
 
     ~hft_server_connector(void);
 
-    void send_tick(double equity, const csv_data_supplier::csv_record &tick_record,
-                       hft::protocol::response &rsp);
+    void init(const std::string &sessid, const std::vector<std::string> &instruments);
 
-    void send_open_notify(const std::string &position_id, bool status,
-                              double price, hft::protocol::response &rsp);
+    void send_tick(const std::string &instrument, double equity, double free_margin,
+                       const csv_data_supplier::csv_record &tick_info, hft::protocol::response &rsp);
 
-    void send_close_notify(const std::string &position_id, bool status,
-                               double price, hft::protocol::response &rsp);
+    void send_open_notify(const std::string &instrument, const std::string &position_id,
+                              bool status, double price, hft::protocol::response &rsp);
+
+    void send_close_notify(const std::string &instrument, const std::string &position_id,
+                               bool status, double price, hft::protocol::response &rsp);
 
 private:
 
@@ -48,7 +49,6 @@ private:
 
     boost::asio::io_context ioctx_;
     boost::asio::ip::tcp::socket socket_;
-    std::string instrument_;
 
 };
 

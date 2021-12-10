@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -19,6 +19,7 @@
 
 #include <map>
 #include <limits>
+#include <memory>
 
 #include <hft_server_connector.hpp>
 #include <csv_data_supplier.hpp>
@@ -38,6 +39,7 @@ public:
 
     struct asacp
     {
+        std::string instrument;
         hft::protocol::response::position_direction direction;
         int pips_yield;
         int qty;
@@ -49,34 +51,33 @@ public:
         int still_opened;
     };
 
-    typedef std::list<asacp> emulation_result;
+    struct emulation_result
+    {
+        emulation_result(void)
+            : min_equity(std::numeric_limits<double>::max()),
+              max_equity(std::numeric_limits<double>::min()),
+              bankrupt(false)
+        {}
+
+        std::list<asacp> trades;
+        double min_equity;
+        double max_equity;
+        bool bankrupt;
+    };
 
     hft_dukascopy_emulator(void) = delete;
 
-    hft_dukascopy_emulator(const std::string &host, const std::string &port,
-                               const std::string &instrument, const std::string &sessid,
-                                   double deposit, const std::string &csv_file_name,
-                                       const std::string &config_file_name,
-                                           bool check_bankruptcy)
-        : hft_connection_(host, port, instrument, sessid),
-          csv_faucet_(csv_file_name),
-          instrument_property_(instrument, config_file_name),
-          instrument_(instrument),
-          equity_(deposit),
-          check_bankruptcy_(check_bankruptcy),
-          min_equity_(std::numeric_limits<double>::max()),
-          max_equity_(std::numeric_limits<double>::min())
-    { proceed(); }
+    hft_dukascopy_emulator(const std::string &host, const std::string &port, const std::string &sessid,
+                               const std::map<std::string, std::string> &instrument_data, double deposit,
+                                    const std::string &config_file_name, bool check_bankruptcy);
 
     const emulation_result &get_result(void) const { return emulation_result_; }
-
-    double get_min_equity(void) const { return min_equity_; }
-    double get_max_equity(void) const { return max_equity_; }
 
 private:
 
     struct opened_position
     {
+        std::string instrument;
         hft::protocol::response::position_direction direction;
         std::string id;
         int open_price_pips;
@@ -86,35 +87,74 @@ private:
 
     typedef std::map<std::string, opened_position> opened_positions;
 
+    struct tick_record : public csv_data_supplier::csv_record
+    {
+        tick_record &operator=(const csv_data_supplier::csv_record &r)
+        {
+            instrument = "";
+            static_cast<csv_data_supplier::csv_record &>(*this) = r;
+
+            return *this;
+        }
+
+        std::string instrument;
+    };
+
+    struct instrument_data_info
+    {
+        enum class data_state
+        {
+            DS_EMPTY,
+            DS_LOADED,
+            DS_EOF
+        };
+
+        instrument_data_info(void) = delete;
+        instrument_data_info(const std::string &instr, const std::string &csv_file, const std::string &config_file_name)
+            : instrument(instr), csv_faucet(csv_file), property(instr, config_file_name), state(data_state::DS_EMPTY)
+        {}
+
+        std::string instrument;
+        csv_data_supplier csv_faucet;
+        hft_instrument_property property;
+
+        data_state state;
+        csv_data_supplier::csv_record loaded;
+        csv_data_supplier::csv_record official;
+    };
+
+    typedef std::map<std::string, std::shared_ptr<instrument_data_info>> instruments_info;
+
     void proceed(void);
 
-    void handle_close_position(const std::string &id, const csv_data_supplier::csv_record &tick_info, bool is_forcibly = false);
+    bool get_record(tick_record &tick);
 
-    void handle_open_position(const hft::protocol::response::open_position_info &opi,
-                                  const csv_data_supplier::csv_record &tick_info);
+    void handle_close_position(const std::string &id, const tick_record &tick_info, bool is_forcibly = false);
 
-    double get_equity_at_moment(const csv_data_supplier::csv_record &tick_info) const;
+    void handle_open_position(const hft::protocol::response::open_position_info &opi, const tick_record &tick_info);
+
+    double get_equity_at_moment(void) const;
+
+    double get_free_margin_at_moment(double equity_at_moment) const;
 
     static int days_elapsed(boost::posix_time::ptime begin, boost::posix_time::ptime end)
     {
         return (end.date() - begin.date()).days();
     }
 
-    int floating2pips(double price) const
+    int floating2pips(const std::string &instrument, double price) const
     {
-        return hft::utils::floating2pips(price, instrument_property_.get_pip_significant_digit());
+        return hft::utils::floating2pips(price, instruments_.at(instrument) -> property.get_pip_significant_digit());
     }
 
     emulation_result emulation_result_;
     opened_positions positions_;
     hft_server_connector hft_connection_;
-    csv_data_supplier csv_faucet_;
-    hft_instrument_property instrument_property_;
-    const std::string instrument_;
+
     double equity_;
     bool check_bankruptcy_;
-    double min_equity_;
-    double max_equity_;
+
+    instruments_info instruments_;
 };
 
 #endif /* __HFT_DUKASCOPY_EMULATOR_HPP__ */

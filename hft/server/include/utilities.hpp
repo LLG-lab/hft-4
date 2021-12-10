@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -18,6 +18,7 @@
 #define __UTILITIES_HPP__
 
 #include <string>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace hft {
 namespace utils {
@@ -27,6 +28,8 @@ std::string file_get_contents(const std::string &filename);
 void file_put_contents(const std::string &filename, const std::string &content);
 
 unsigned long get_current_timestamp(void);
+
+unsigned long ptime2timestamp(const boost::posix_time::ptime &t);
 
 std::string find_free_name(const std::string &file_name);
 

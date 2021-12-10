@@ -178,11 +178,12 @@ public class ProxyBridge implements IStrategy {
         double ask = tick.getAsk();
         double bid = tick.getBid();
         double equity = account.getEquity();
+        double free_margin = equity - account.getUsedMargin();
 
         HftResponse resp;
 
         try {
-            resp = hft.tick(instr_str, ask, bid, equity);
+            resp = hft.tick(instr_str, ask, bid, equity, free_margin);
         } catch (Exception e) {
             System.err.println("WARNING! Method tick failed: [" + e.getMessage() + ']');
             return;

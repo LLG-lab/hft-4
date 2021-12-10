@@ -16,9 +16,9 @@
 #           /:::/    /                \::/    /    \::/    /
 #          /:::/    /                  \/____/      \/____/
 #         /:::/    /
-#        /:::/    /      -=≡≣ High Frequency Trading System  ≣≡=-
+#        /:::/    /      -=≡≣ High Frequency Trading System ® ≣≡=-
 #        \::/    /
-#         \/____/    Copyright  2017 - 2021 by LLG Ryszard Gradowski
+#         \/____/    Copyright © 2017 - 2021 by LLG Ryszard Gradowski
 #                                All Rights Reserved.
 #
 #
@@ -40,9 +40,6 @@ project(hft)
 
 execute_process(COMMAND ${CMAKE_CURRENT_LIST_DIR}/../etc/version.sh "--major" OUTPUT_VARIABLE hft_VERSION_MAJOR)
 execute_process(COMMAND ${CMAKE_CURRENT_LIST_DIR}/../etc/version.sh "--minor" OUTPUT_VARIABLE hft_VERSION_MINOR)
-
-#set(hft_VERSION_MAJOR 4)
-#set(hft_VERSION_MINOR 0)
 
 #
 # Set ‘make install’ destination dir.

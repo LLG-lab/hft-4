@@ -126,7 +126,7 @@ public class HftConnector {
         }
     }
 
-    public HftResponse tick(String instrument, double ask, double bid, double equity) throws Exception {
+    public HftResponse tick(String instrument, double ask, double bid, double equity, double free_margin) throws Exception {
         JSONObject jo = new JSONObject();
 
         jo.put("method", "tick");
@@ -135,6 +135,7 @@ public class HftConnector {
         jo.put("ask", ask);
         jo.put("bid", bid);
         jo.put("equity", equity);
+        jo.put("free_margin", free_margin);
 
         String json_str = sendRecvLine(jo.toString());
         System.out.println(json_str);

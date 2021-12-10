@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -61,6 +61,7 @@ struct tick
     double ask;
     double bid;
     double equity;
+    double free_margin;
 };
 
 // {"method":"open_notify","instrument":"EUR/USD","id":"ahd76s","status":false,"price":1.23}

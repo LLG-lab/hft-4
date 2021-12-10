@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -141,26 +141,38 @@ void hft_handler_resource::save(void)
 
 void hft_handler_resource::set_int_var(const std::string &var_name, int value)
 {
-    ints_[var_name] = value;
-    changed_ = true;
+    if (ints_[var_name] != value)
+    {
+        ints_[var_name] = value;
+        changed_ = true;
+    }
 }
 
 void hft_handler_resource::set_bool_var(const std::string &var_name, bool value)
 {
-    bools_[var_name] = value;
-    changed_ = true;
+    if (bools_[var_name] != value)
+    {
+        bools_[var_name] = value;
+        changed_ = true;
+    }
 }
 
 void hft_handler_resource::set_double_var(const std::string &var_name, double value)
 {
-    doubles_[var_name] = value;
-    changed_ = true;
+    if (doubles_[var_name] != value)
+    {
+        doubles_[var_name] = value;
+        changed_ = true;
+    }
 }
 
 void hft_handler_resource::set_string_var(const std::string &var_name, const std::string &value)
 {
-    strings_[var_name] = value;
-    changed_ = true;
+    if (strings_[var_name] != value)
+    {
+        strings_[var_name] = value;
+        changed_ = true;
+    }
 }
 
 int hft_handler_resource::get_int_var(const std::string &var_name) const

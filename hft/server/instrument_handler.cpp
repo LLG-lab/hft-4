@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -106,15 +106,21 @@ double instrument_handler::json_get_double_attribute(const boost::json::object &
 
     value const &attr_v = obj.at(attr_name);
 
-    if (attr_v.kind() != kind::double_)
+    if (attr_v.kind() == kind::double_)
+    {
+        return attr_v.get_double();
+    }
+    else if (attr_v.kind() == kind::int64)
+    {
+        return attr_v.get_int64();
+    }
+    else
     {
         std::string error_msg = std::string("Invalid attribute type for ‘")
                                 + attr_name + std::string("’ - floating point type expected");
 
         throw std::runtime_error(error_msg);
     }
-
-    return attr_v.get_double();
 }
 
 int instrument_handler::json_get_int_attribute(const boost::json::object &obj,

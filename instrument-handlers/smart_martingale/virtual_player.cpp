@@ -11,10 +11,21 @@ virtual_player::virtual_player(hft_handler_resource &hs, const std::string &inst
         : pips_limit_(-1),
           logger_id_(logger_id),
           hs_(hs),
-          instance_name_(instance_name)         
+          instance_name_(instance_name),
+          capacity_(3),
+          long_pattern_("000"),
+          short_pattern_("111")
 {
     hs_.set_int_var(s_starting_price, -1);
     hs_.set_string_var(s_play_results, "");
+}
+
+void virtual_player::set_capacity(size_t capacity)
+{
+    capacity_ = capacity;
+
+    long_pattern_  = std::string(capacity, '0');
+    short_pattern_ = std::string(capacity, '1');
 }
 
 void virtual_player::new_market_data(int ask_pips, int bid_pips)
@@ -26,7 +37,6 @@ void virtual_player::new_market_data(int ask_pips, int bid_pips)
 
     if (hs_.get_int_var(s_starting_price) == -1)
     {
-        // starting_price_ = ask_pips;
         hs_.set_int_var(s_starting_price, ask_pips);
         return;
     }
@@ -34,13 +44,13 @@ void virtual_player::new_market_data(int ask_pips, int bid_pips)
     if (bid_pips - hs_.get_int_var(s_starting_price) >= pips_limit_)
     {
         update_play_result('1');
-        // starting_price_ = ask_pips;
+
         hs_.set_int_var(s_starting_price, ask_pips);
     }
     else if (hs_.get_int_var(s_starting_price) - bid_pips >= pips_limit_)
     {
         update_play_result('0');
-        // starting_price_ = ask_pips;
+
         hs_.set_int_var(s_starting_price, ask_pips);
     }
 }
@@ -49,16 +59,16 @@ virtual_player::advice virtual_player::give_advice(void) const
 {
     std::string play_results = hs_.get_string_var(s_play_results);
 
-    if (play_results.length() < 3)
+    if (play_results.length() < capacity_)
     {
         return advice::DO_NOTHING;
     }
 
-    if (play_results[0] == '0' && play_results[1] == '0' && play_results[2] == '0')
+    if (play_results == long_pattern_)
     {
         return advice::PLAY_LONG;
     }
-    else if (play_results[0] == '1' && play_results[1] == '1' && play_results[2] == '1')
+    else if (play_results == short_pattern_)
     {
         return advice::PLAY_SHORT;
     }
@@ -70,16 +80,12 @@ void virtual_player::update_play_result(char result)
 {
     std::string play_results = hs_.get_string_var(s_play_results);
 
-    if (play_results.length() < 3)
+    if (play_results.length() == capacity_)
     {
-        play_results.push_back(result);
+        play_results = play_results.substr(1, capacity_ - 1);
     }
-    else
-    {
-        play_results[0] = play_results[1];
-        play_results[1] = play_results[2];
-        play_results[2] = result;
-    }
+
+    play_results.push_back(result);
 
     hs_.set_string_var(s_play_results, play_results);
 }

@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -30,6 +30,10 @@ public:
 private:
 
     void print_number(double num, int len);
+
+    void print_string(const std::string &s, int len);
+
+    size_t get_max_instrument_strlen(const hft_dukascopy_emulator::emulation_result &data);
 
     const bool is_tty_output_;
 };

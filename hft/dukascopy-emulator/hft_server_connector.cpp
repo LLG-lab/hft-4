@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -18,13 +18,32 @@
 
 #include <hft_server_connector.hpp>
 
-hft_server_connector::hft_server_connector(const std::string &host, const std::string &port,
-                                               const std::string &instrument, const std::string &sessid)
-    : ioctx_(), socket_(ioctx_), instrument_(instrument)
+hft_server_connector::hft_server_connector(const std::string &host, const std::string &port)
+    : ioctx_(), socket_(ioctx_)
 {
-
     boost::asio::ip::tcp::resolver resolver(ioctx_);
     boost::asio::connect(socket_, resolver.resolve({host, port}));
+}
+
+hft_server_connector::~hft_server_connector(void)
+{
+}
+
+void hft_server_connector::init(const std::string &sessid, const std::vector<std::string> &instruments)
+{
+    if (instruments.empty())
+    {
+        throw std::runtime_error("hft_server_connector: init: Empty instrument set");
+    }
+
+    std::string instruments_str;
+
+    for (int i = 0; i < instruments.size() - 1; i++)
+    {
+        instruments_str += "\"" + instruments[i] + "\",";
+    }
+
+    instruments_str += "\"" + instruments[instruments.size() - 1] + "\"";
 
     //
     // Sending ‘init’ to HFT server.
@@ -33,8 +52,8 @@ hft_server_connector::hft_server_connector(const std::string &host, const std::s
     std::ostringstream payload;
 
     payload << "{\"method\":\"init\",\"sessid\":\""
-            << sessid << "\",\"instruments\":[\""
-            << instrument << "\"]}\n";
+            << sessid << "\",\"instruments\":["
+            << instruments_str << "]}\n";
     
     hft::protocol::response rsp;
     rsp.unserialize(send_recv_server(payload.str()));
@@ -45,49 +64,46 @@ hft_server_connector::hft_server_connector(const std::string &host, const std::s
     }
 }
 
-hft_server_connector::~hft_server_connector(void)
-{
-}
-
-void hft_server_connector::send_tick(double equity, const csv_data_supplier::csv_record &tick_record,
-                                         hft::protocol::response &rsp)
+void hft_server_connector::send_tick(const std::string &instrument, double equity, double free_margin,
+                                         const csv_data_supplier::csv_record &tick_info, hft::protocol::response &rsp)
 {
     std::ostringstream payload;
 
     payload << "{\"method\":\"tick\",\"instrument\":\""
-            << instrument_ << "\",\"timestamp\":\""
-            << tick_record.request_time << "\",\"ask\":"
-            << tick_record.ask << ",\"bid\":"
-            << tick_record.bid << ",\"equity\":"
-            << equity << "}\n";
+            << instrument << "\",\"timestamp\":\""
+            << tick_info.request_time << "\",\"ask\":"
+            << tick_info.ask << ",\"bid\":"
+            << tick_info.bid << ",\"equity\":"
+            << equity  << ",\"free_margin\":"
+            << free_margin << "}\n";
 
     rsp.unserialize(send_recv_server(payload.str()));
 }
 
-void hft_server_connector::send_open_notify(const std::string &position_id, bool status,
-                                                double price, hft::protocol::response &rsp)
+void hft_server_connector::send_open_notify(const std::string &instrument, const std::string &position_id,
+                                                bool status, double price, hft::protocol::response &rsp)
 {
     std::ostringstream payload;
 
     std::string s = (status ? "true" : "false");
 
     payload << "{\"method\":\"open_notify\",\"instrument\":\""
-            << instrument_ << "\",\"id\":\"" << position_id
+            << instrument << "\",\"id\":\"" << position_id
             << "\",\"status\":" << s << ",\"price\":"
             << price << "}\n";
 
     rsp.unserialize(send_recv_server(payload.str()));
 }
 
-void hft_server_connector::send_close_notify(const std::string &position_id, bool status,
-                                                 double price, hft::protocol::response &rsp)
+void hft_server_connector::send_close_notify(const std::string &instrument, const std::string &position_id,
+                                                 bool status, double price, hft::protocol::response &rsp)
 {
     std::ostringstream payload;
 
     std::string s = (status ? "true" : "false");
 
     payload << "{\"method\":\"close_notify\",\"instrument\":\""
-            << instrument_ << "\",\"id\":\"" << position_id
+            << instrument << "\",\"id\":\"" << position_id
             << "\",\"status\":" << s << ",\"price\":"
             << price << "}\n";
 

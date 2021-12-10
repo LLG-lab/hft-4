@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -32,6 +32,7 @@ public:
 	double get_long_dayswap_per_contract(void) const { return long_dayswap_per_contract_; }
 	double get_short_dayswap_per_contract(void) const { return short_dayswap_per_contract_; }
 	double get_commision_per_contract(void) const { return commision_per_contract_; }
+    double get_margin_required_per_contract(void) const { return margin_required_per_contract_; }
 
 private:
 
@@ -40,6 +41,7 @@ private:
 	double long_dayswap_per_contract_;
 	double short_dayswap_per_contract_;
 	double commision_per_contract_;
+    double margin_required_per_contract_;
 
 };
 

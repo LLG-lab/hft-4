@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <map>
 
 #include <boost/program_options.hpp>
 
@@ -30,8 +31,7 @@ static struct dukas_emulator_options_type
 {
     std::string host;
     std::string port;
-    std::string instrument;
-    std::string csv_file_names;
+    std::vector<std::string> instruments;
     std::string sessid;
     std::string config_file_name;
     int bankroll;
@@ -45,6 +45,52 @@ static struct dukas_emulator_options_type
 #define hft_log(__X__) \
     CLOG(__X__, "dukascopy_emulator")
 
+static std::map<std::string, std::string> mk_instrument_info_map(const std::vector<std::string> &instruments)
+{
+    std::map<std::string, std::string> result;
+
+    for (auto &x : instruments)
+    {
+        size_t delimiter_index = x.find_first_of(':');
+
+        if (delimiter_index == std::string::npos)
+        {
+            std::string err_msg = "Required line <ticker>:<file_name>, no delimiter ‘:’ found in line: ‘"
+                                  + x + "’";
+
+            throw std::runtime_error(err_msg.c_str());
+        }
+
+        std::string ticker = x.substr(0, delimiter_index);
+
+        if (ticker.length() == 0)
+        {
+            std::string err_msg = "No ticker specified in line ‘" + x + "’";
+
+            throw std::runtime_error(err_msg.c_str());
+        }
+
+        std::string file_name = x.substr(delimiter_index+1, x.length()-delimiter_index);
+
+        if (file_name.length() == 0)
+        {
+            std::string err_msg = "No file name specified in line ‘" + x + "’";
+
+            throw std::runtime_error(err_msg.c_str());
+        }
+
+        if (result.find(ticker) != result.end())
+        {
+            std::string err_msg = "Duplicate ticker ‘" + ticker + "’";
+
+            throw std::runtime_error(err_msg.c_str());
+        }
+
+        result[ticker] = file_name;
+    }
+
+    return result;
+}
 
 int hft_dukasemu_main(int argc, char *argv[])
 {
@@ -84,8 +130,7 @@ int hft_dukasemu_main(int argc, char *argv[])
         ("help,h", "produce help message")
         ("host,H", prog_opts::value<std::string>(&hftOption(host)) -> default_value("localhost"), "HFT server hostname or ip address.")
         ("port,P", prog_opts::value<std::string>(&hftOption(port)) -> default_value("8137"), "HFT server listen port.")
-        ("instrument,i", prog_opts::value<std::string>(&hftOption(instrument)), "Trade ticker of the instrument")
-        ("csv-file,f", prog_opts::value<std::string>(&hftOption(csv_file_names)), "CSV file name with dukascopy history data or file name with list of csv files")
+        ("instrument,i", prog_opts::value<std::vector<std::string>>(&hftOption(instruments)), "<ticker>:<csv_file_name_or_file_name_with_list_of_csv_files>")
         ("sessid,s", prog_opts::value<std::string>(&hftOption(sessid)) -> default_value("dukascopy-emulator"), "Session ID")
         ("bankroll,b", prog_opts::value<int>(&hftOption(bankroll)) -> default_value(10000), "Initial virtual deposit")
         ("check-bankruptcy,B", prog_opts::value<bool>(&hftOption(check_bankruptcy)) -> default_value(false), "Stop simulation when equity drops to zero")
@@ -117,37 +162,27 @@ int hft_dukasemu_main(int argc, char *argv[])
 
     el::Logger *logger = el::Loggers::getLogger("dukascopy_emulator", true);
 
-    if (hftOption(instrument) == "")
+    if (hftOption(instruments).size() == 0)
     {
         hft_log(ERROR) << "No instrument specified.";
 
         return 1;
     }
 
-    if (hftOption(csv_file_names) == "")
-    {
-        hft_log(ERROR) << "No csv data specified.";
-
-        return 1;
-    }
-
     try
     {
+
         hft_dukascopy_emulator simulation(hftOption(host),
                                           hftOption(port),
-                                          hftOption(instrument),
                                           hftOption(sessid),
+                                          mk_instrument_info_map(hftOption(instruments)),
                                           hftOption(bankroll),
-                                          hftOption(csv_file_names),
                                           hftOption(config_file_name),
                                           hftOption(check_bankruptcy));
 
         hft_display_filter hdf;
         hdf.display(simulation.get_result());
 
-        std::cout << "Additional info:\n";
-        std::cout << "min equity: " << simulation.get_min_equity() << "\n";
-        std::cout << "max equity: " << simulation.get_max_equity() << "\n";
     }
     catch (const std::exception &e)
     {

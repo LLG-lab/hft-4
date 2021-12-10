@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -26,8 +26,12 @@ hft_display_filter::hft_display_filter(void)
 
 void hft_display_filter::display(const hft_dukascopy_emulator::emulation_result &data)
 {
-    for (auto &x : data)
+    int length = get_max_instrument_strlen(data);
+
+    for (auto &x : data.trades)
     {
+        print_string(x.instrument, length + 1);
+
         if (x.direction == hft::protocol::response::position_direction::POSITION_LONG)
         {
             std::cout << "LONG  ";
@@ -54,6 +58,22 @@ void hft_display_filter::display(const hft_dukascopy_emulator::emulation_result 
 
         std::cout << "\n";
     }
+
+    std::cout << "Additional info:\n";
+    std::cout << "min equity: " << data.min_equity << "\n";
+    std::cout << "max equity: " << data.max_equity << "\n";
+
+    if (data.bankrupt)
+    {
+        if (! is_tty_output_)
+        {
+            std::cout << "*** BANKRUPT ***\n";
+        }
+        else
+        {
+            std::cout << "\033[0;31m*** BANKRUPT ***\033[0m\n";
+        }
+    }
 }
 
 void hft_display_filter::print_number(double num, int len)
@@ -79,3 +99,34 @@ void hft_display_filter::print_number(double num, int len)
         std::cout << num_str << "\033[0m";
     }
 }
+
+void hft_display_filter::print_string(const std::string &s, int len)
+{
+    auto l = s.length();
+
+    if (l > len)
+    {
+        std::cout << s.substr(0, len);
+
+        return;
+    }
+
+    std::string completion(len - l, ' ');
+    std::cout << s << completion;
+}
+
+size_t hft_display_filter::get_max_instrument_strlen(const hft_dukascopy_emulator::emulation_result &data)
+{
+    size_t maxl = 0;
+
+    for (auto &x : data.trades)
+    {
+        if (x.instrument.length() > maxl)
+        {
+            maxl = x.instrument.length();
+        }
+    }
+
+    return maxl;
+}
+

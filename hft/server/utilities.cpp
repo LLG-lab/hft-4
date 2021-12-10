@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-            **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -21,7 +21,6 @@
 #include <sstream>
 
 #include <boost/filesystem.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -57,7 +56,7 @@ std::string file_get_contents(const std::string &filename)
 
 void file_put_contents(const std::string &filename, const std::string &content)
 {
-	std::ofstream out_stream;
+    std::ofstream out_stream;
     out_stream.open(filename, std::fstream::out);
 
     if (out_stream.fail())
@@ -66,7 +65,7 @@ void file_put_contents(const std::string &filename, const std::string &content)
 
         throw std::runtime_error(msg);
     }
- 
+
     out_stream << content;
 
     out_stream.close();
@@ -79,6 +78,13 @@ unsigned long get_current_timestamp(void)
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 
     return millis;
+}
+
+unsigned long ptime2timestamp(const boost::posix_time::ptime &t)
+{
+    static boost::posix_time::ptime begin = boost::posix_time::ptime(boost::posix_time::time_from_string("1970-01-01 00:00:00.000"));
+
+    return (t - begin).total_milliseconds();
 }
 
 std::string find_free_name(const std::string &file_name)
@@ -132,7 +138,7 @@ std::string expand_env_variable(const std::string &input)
 int floating2pips(double price, char pips_digit)
 {
     char buffer[15];
-    char fmt[] = { '%', '0', '.', pips_digit, 'f', 0};
+    char fmt[] = { '%', '0', '.', pips_digit, 'f', 0 };
     int i = 0, j = 0;
 
     int status = snprintf(buffer, 15, fmt, price);

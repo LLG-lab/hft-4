@@ -1,8 +1,6 @@
 #ifndef __VIRTUAL_PLAYER_HPP__
 #define __VIRTUAL_PLAYER_HPP__
 
-//#include <string>
-//#include <vector>
 #include <hft_handler_resource.hpp>
 
 class virtual_player
@@ -22,6 +20,7 @@ public:
     ~virtual_player(void) = default;
 
     void set_pips_limit(int limit) { pips_limit_ = limit; }
+    void set_capacity(size_t capacity);
     void new_market_data(int ask_pips, int bid_pips);
     advice give_advice(void) const;
 
@@ -33,6 +32,10 @@ private:
     std::string logger_id_;
     hft_handler_resource &hs_;
     std::string instance_name_;
+
+    size_t capacity_;
+    std::string long_pattern_;
+    std::string short_pattern_;
 };
 
 #endif /* __VIRTUAL_PLAYER_HPP__ */

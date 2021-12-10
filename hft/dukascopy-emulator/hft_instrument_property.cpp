@@ -1,8 +1,8 @@
 /**********************************************************************\
 **                                                                    **
-**             -=≡≣ High Frequency Trading System  ≣≡=-              **
+**             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright  2017 - 2021 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2021 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual propery              **
@@ -26,13 +26,14 @@
 // Constructor load XML configuration file and parses
 // following (example) fragment:
 //
-// 	<dukascopy-emulator>
+//	<dukascopy-emulator>
 //		<instrument-property ticker="EUR/USD"
 //				pip-significant-digit="4"
 //				pip-value-per-contract="0.0003876"
 //				long-dayswap-per-contract="-0.0001558"
 //				short-dayswap-per-contract="0.0000038"
 //				commision-per-contract="0.0001649"
+//              margin-required-per-contract="0.155"
 //		/>
 //	</dukascopy-emulator>
 //
@@ -201,6 +202,24 @@ hft_instrument_property::hft_instrument_property(const std::string &instrument,
                 }
 
                 commision_per_contract_ = std::stod(std::string(commision_per_contract_attr -> value()));
+
+                //
+                // Get ‘margin-required-per-contract’.
+                //
+
+                xml_attribute<> *margin_required_per_contract_attr = node -> first_attribute("margin-required-per-contract");
+
+                if (margin_required_per_contract_attr == nullptr)
+                {
+                    std::ostringstream error;
+
+                    error << "Missing ‘margin-required-per-contract’ attribute in ‘instrument-property’ node in ‘"
+                          << config_file_name << "’ file";
+
+                    throw std::runtime_error(error.str());
+                }
+
+                margin_required_per_contract_ = std::stod(std::string(margin_required_per_contract_attr -> value()));
 
                 return;
             }
