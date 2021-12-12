@@ -277,7 +277,7 @@ void hft_handler_resource::process_line(const std::string &line)
         bools_[var_name] = boost::lexical_cast<bool>(var_value);
 
         hft_log(INFO) << "handler_resource: Restored boolean "
-                      << var_name << " → " << ints_[var_name]
+                      << var_name << " → " << bools_[var_name]
                       << ".";
     }
     else if (type == "d")
@@ -285,7 +285,7 @@ void hft_handler_resource::process_line(const std::string &line)
         doubles_[var_name] = boost::lexical_cast<double>(var_value);
 
         hft_log(INFO) << "handler_resource: Restored floating point "
-                      << var_name << " → " << ints_[var_name]
+                      << var_name << " → " << doubles_[var_name]
                       << ".";
     }
     else if (type == "s")
@@ -302,7 +302,7 @@ void hft_handler_resource::process_line(const std::string &line)
             strings_[var_name] = hex_to_string(var_value);
 
             hft_log(INFO) << "handler_resource: Restored string "
-                          << var_name << " → " << ints_[var_name]
+                          << var_name << " → " << strings_[var_name]
                           << ".";
         }
     }
