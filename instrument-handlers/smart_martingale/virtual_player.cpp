@@ -87,5 +87,8 @@ void virtual_player::update_play_result(char result)
 
     play_results.push_back(result);
 
+    hft_log(TRACE) << "vplayer: Current virtual player results are: ‘"
+                   << play_results << "’.";
+
     hs_.set_string_var(s_play_results, play_results);
 }

@@ -203,7 +203,15 @@ void smart_martingale::on_tick(const hft::protocol::request::tick &msg, hft::pro
 
     if (spread > max_spread_)
     {
+       hft_log(TRACE) << "tick: Skipping tick – spread to high: ‘"
+                      << spread << "’ pips.";
+
        return;
+    }
+    else
+    {
+        hft_log(TRACE) << "tick: ASK: ‘" << msg.ask
+                       << "’, BID: ‘" << msg.bid << "’.";
     }
 
     vplayer_.new_market_data(ask_pips, bid_pips);
@@ -491,6 +499,9 @@ void smart_martingale::continue_long_position(int bid_pips, hft::protocol::respo
          hs_.set_int_var("martingale_depth", 0);
          hs_.set_int_var("state", (int) state::TRY_CLOSE_LONG);
 
+         hft_log(TRACE) << "(LONG) Going to profitable close position ‘"
+                        << hs_.get_string_var("position.id") << "’.";
+
          market.close_position(hs_.get_string_var("position.id"));
 
          return;
@@ -501,11 +512,14 @@ void smart_martingale::continue_long_position(int bid_pips, hft::protocol::respo
 
          if (! hs_.get_bool_var("position.close_attempted"))
          {
+             hft_log(TRACE) << "(LONG) Going to lossy close position ‘"
+                            << hs_.get_string_var("position.id") << "’.";
+
              hs_.set_double_var("money_lost", hs_.get_double_var("money_lost") + get_current_money_lost(pips_lost));
          }
          else
          {
-             hft_log(WARNING) << "(SHORT) Reattempting close position ‘"
+             hft_log(WARNING) << "(LONG) Reattempting close position ‘"
                               << hs_.get_string_var("position.id") << "’.";
          }
 
@@ -519,6 +533,13 @@ void smart_martingale::continue_long_position(int bid_pips, hft::protocol::respo
 
          hs_.set_int_var("state", (int) state::TRY_CLOSE_LONG);
     }
+    else
+    {
+        hft_log(TRACE) << "(LONG) Pips left for close position: profitable ‘"
+                       << trade_pips_limit_ + hs_.get_int_var("position.open_price_pips") - bid_pips
+                       << "’, lossy ‘" << trade_pips_limit_ + bid_pips - hs_.get_int_var("position.open_price_pips")
+                       << "’.";
+    }
 }
 
 void smart_martingale::continue_short_position(int ask_pips, hft::protocol::response &market)
@@ -531,6 +552,9 @@ void smart_martingale::continue_short_position(int ask_pips, hft::protocol::resp
 
          hs_.set_int_var("martingale_depth", 0);
          hs_.set_int_var("state", (int) state::TRY_CLOSE_SHORT);
+
+         hft_log(TRACE) << "(SHORT) Going to profitable close position ‘"
+                        << hs_.get_string_var("position.id") << "’.";
          
          market.close_position(hs_.get_string_var("position.id"));
 
@@ -542,11 +566,14 @@ void smart_martingale::continue_short_position(int ask_pips, hft::protocol::resp
 
          if (! hs_.get_bool_var("position.close_attempted"))
          {
+             hft_log(TRACE) << "(SHORT) Going to lossy close position ‘"
+                            << hs_.get_string_var("position.id") << "’.";
+
              hs_.set_double_var("money_lost", hs_.get_double_var("money_lost") + get_current_money_lost(pips_lost));
          }
          else
          {
-             hft_log(WARNING) << "(LONG) Reattempting close position ‘"
+             hft_log(WARNING) << "(SHORT) Reattempting close position ‘"
                               << hs_.get_string_var("position.id") << "’.";
          }
 
@@ -559,6 +586,13 @@ void smart_martingale::continue_short_position(int ask_pips, hft::protocol::resp
          market.close_position(hs_.get_string_var("position.id"));
 
          hs_.set_int_var("state", (int) state::TRY_CLOSE_SHORT);
+    }
+    else
+    {
+        hft_log(TRACE) << "(SHORT) Pips left for close position: profitable ‘"
+                       << trade_pips_limit_ - hs_.get_int_var("position.open_price_pips") + ask_pips
+                       << "’, lossy ‘" << trade_pips_limit_ - ask_pips + hs_.get_int_var("position.open_price_pips")
+                       << "’.";
     }
 }
 

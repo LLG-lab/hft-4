@@ -188,7 +188,7 @@ int hft_server_main(int argc, char *argv[])
         std::cerr << "**** FATAL ERROR: "
                   << e.what() << std::endl;
 
-        hft_log(ERROR) << "**** FATAL ERROR: " << e.what();
+        hft_log(FATAL) << "**** FATAL ERROR: " << e.what();
 
         el::base::debug::StackTrace();
 
