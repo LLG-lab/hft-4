@@ -21,6 +21,7 @@
 #include <marketplace_gateway_process.hpp>
 #include <hft_session.hpp>
 #include <basic_tcp_server.hpp>
+#include <hft_server_config.hpp>
 #include <deallocator.hpp>
 
 #include <boost/asio.hpp>
@@ -67,33 +68,6 @@ static std::unique_ptr<daemon_process> server_daemon;
 int hft_server_main(int argc, char *argv[])
 {
     //
-    // Define default configuration for all future server loggers.
-    //
-
-    el::Configurations logger_cfg;
-    logger_cfg.setToDefault();
-    logger_cfg.parseFromText("* GLOBAL:\n"
-                             " FORMAT               =  \"%datetime %level [%logger] %msg\"\n"
-                             " FILENAME             =  \"/var/log/hft/server.log\"\n"
-                             " ENABLED              =  true\n"
-                             " TO_FILE              =  true\n"
-                             " TO_STANDARD_OUTPUT   =  false\n"
-                             " SUBSECOND_PRECISION  =  1\n"
-                             " PERFORMANCE_TRACKING =  true\n"
-                             " MAX_LOG_FILE_SIZE    =  10485760 ## 10MiB\n"
-                             " LOG_FLUSH_THRESHOLD  =  1 ## Flush after every single log\n"
-                            );
-    el::Loggers::setDefaultConfigurations(logger_cfg);
-
-    START_EASYLOGGINGPP(argc, argv);
-
-    //
-    // Setup logging.
-    //
-
-    el::Logger *logger = el::Loggers::getLogger("server", true);
-
-    //
     // Parsing options for hft server.
     //
 
@@ -129,6 +103,25 @@ int hft_server_main(int argc, char *argv[])
 
         return 0;
     }
+
+    hft_server_config hft_srv_cfg(hftOption(config_file_name));
+
+    //
+    // Define default configuration for all future server loggers.
+    //
+
+    el::Configurations logger_cfg;
+    logger_cfg.setToDefault();
+    logger_cfg.parseFromText(hft_srv_cfg.get_logging_config().c_str());
+    el::Loggers::setDefaultConfigurations(logger_cfg);
+
+    START_EASYLOGGINGPP(argc, argv);
+
+    //
+    // Setup logging.
+    //
+
+    el::Logger *logger = el::Loggers::getLogger("server", true);
 
     if (vm.count("daemon"))
     {

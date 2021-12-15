@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <hft>
+	<server>
+		<!--
+		Available logging severities:
+			FATAL
+			ERROR
+			WARNING
+			INFO
+			TRACE
+			DEBUG
+		-->
+		<logging severity="INFO">
+	</server>
 	<market-gateway-processes>
 		<process name="Dukascopy" active="false">
 			<exec>java</exec>

@@ -138,7 +138,7 @@ public class HftConnector {
         jo.put("free_margin", free_margin);
 
         String json_str = sendRecvLine(jo.toString());
-        System.out.println(json_str);
+        //System.out.println(json_str);
 
         HftResponse hftResponse = new HftResponse(json_str);
 

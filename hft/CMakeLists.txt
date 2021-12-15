@@ -74,6 +74,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/server/include/hft_response.hpp
      ${PROJECT_SOURCE_DIR}/server/include/session_transport.hpp
      ${PROJECT_SOURCE_DIR}/server/include/basic_tcp_server.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/hft_server_config.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_session.hpp
      ${PROJECT_SOURCE_DIR}/server/include/trade_time_frame.hpp
      ${PROJECT_SOURCE_DIR}/server/include/instrument_handler.hpp
@@ -98,6 +99,7 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/server/utilities.cpp
      ${PROJECT_SOURCE_DIR}/server/daemon_process.cpp
      ${PROJECT_SOURCE_DIR}/server/marketplace_gateway_process.cpp
+     ${PROJECT_SOURCE_DIR}/server/hft_server_config.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_server_main.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_request.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_response.cpp
