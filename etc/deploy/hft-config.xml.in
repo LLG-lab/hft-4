@@ -10,7 +10,7 @@
 			TRACE
 			DEBUG
 		-->
-		<logging severity="INFO">
+		<logging severity="INFO"/>
 	</server>
 	<market-gateway-processes>
 		<process name="Dukascopy" active="false">

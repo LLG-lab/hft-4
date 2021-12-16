@@ -70,6 +70,8 @@ void hft_handler_resource::persistent(void)
 {
     std::string data;
 
+    initialized_ = true;
+
     try
     {
         data = hft::utils::file_get_contents(file_name_);
@@ -79,7 +81,6 @@ void hft_handler_resource::persistent(void)
         hft_log(WARNING) << "handler_resource: Unalbe to load file ‘"
                          << file_name_ << "’.";
 
-        initialized_ = true;
         return;
     }
 
@@ -98,6 +99,9 @@ void hft_handler_resource::persistent(void)
 
 void hft_handler_resource::save(void)
 {
+    hft_log(DEBUG) << "hft_handler_resource::save: Got called, initialized_: ‘"
+                   << initialized_ << "’, changed_ ‘" << changed_ << "’.";
+
     if (initialized_ && changed_)
     {
         std::stringstream ss;
@@ -135,6 +139,9 @@ void hft_handler_resource::save(void)
 
         hft::utils::file_put_contents(file_name_, payload);
 
+        hft_log(TRACE) << "Saved handler state to ‘"
+                       << file_name_ << "’.";
+
         changed_ = false;
     }
 }
@@ -145,6 +152,9 @@ void hft_handler_resource::set_int_var(const std::string &var_name, int value)
     {
         ints_[var_name] = value;
         changed_ = true;
+
+        hft_log(DEBUG) << "Updated integer: ‘" << var_name
+                       << "=" << value << "’.";
     }
 }
 
@@ -154,6 +164,9 @@ void hft_handler_resource::set_bool_var(const std::string &var_name, bool value)
     {
         bools_[var_name] = value;
         changed_ = true;
+
+        hft_log(DEBUG) << "Updated boolean: ‘" << var_name
+                       << "=" << value << "’.";
     }
 }
 
@@ -163,6 +176,9 @@ void hft_handler_resource::set_double_var(const std::string &var_name, double va
     {
         doubles_[var_name] = value;
         changed_ = true;
+
+        hft_log(DEBUG) << "Updated floating point: ‘" << var_name
+                       << "=" << value << "’.";
     }
 }
 
@@ -172,6 +188,9 @@ void hft_handler_resource::set_string_var(const std::string &var_name, const std
     {
         strings_[var_name] = value;
         changed_ = true;
+
+        hft_log(DEBUG) << "Updated string: ‘" << var_name
+                       << "=" << value << "’.";
     }
 }
 
