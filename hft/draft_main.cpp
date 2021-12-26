@@ -36,8 +36,8 @@ void test_days(void)
     // std::string ts("2002-01-20 23:59:59.000");
     // ptime t(time_from_string(ts))
 
-    boost::posix_time::ptime begin = boost::posix_time::ptime(boost::posix_time::time_from_string("2021-07-13 23:59:58.000"));
-    boost::posix_time::ptime end   = boost::posix_time::ptime(boost::posix_time::time_from_string("2021-07-15 00:00:09.000"));
+    boost::posix_time::ptime begin = boost::posix_time::ptime(boost::posix_time::time_from_string("2022-07-13 23:59:58.000"));
+    boost::posix_time::ptime end   = boost::posix_time::ptime(boost::posix_time::time_from_string("2022-07-15 00:00:09.000"));
 
     std::cout << "Upłynęło dni: " << days_elapsed(begin, end) << "\n";
 }

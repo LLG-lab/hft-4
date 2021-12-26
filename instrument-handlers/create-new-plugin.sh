@@ -8,7 +8,7 @@ declare -r MYDIR=$(cd $(dirname "$0") ; pwd )
 
 if [ ${#@} -eq 0 ] ; then
     echo "HFT Instrument Handler src-code Creator v.1.0"
-    echo "Copyright (c) 2017-2021 by LLG Ryszard Gradowski, All Rights Reserved"
+    echo "Copyright (c) 2017-2022 by LLG Ryszard Gradowski, All Rights Reserved"
     echo ""
     echo "Usage:"
     echo " ${0}  <new-plugin-name>"
