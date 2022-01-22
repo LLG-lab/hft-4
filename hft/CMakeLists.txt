@@ -22,7 +22,7 @@
 #                                All Rights Reserved.
 #
 #
-# CAUTION! This application is an intellectual propery
+# CAUTION! This application is an intellectual property
 #          of LLG Ryszard Gradowski. This application as
 #          well as any part of source code cannot be used,
 #          modified and distributed by third party person

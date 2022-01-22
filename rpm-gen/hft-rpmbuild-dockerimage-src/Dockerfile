@@ -16,6 +16,8 @@ RUN yum -y install \
       sqlite-devel \
       newt-devel \
       maven \
+      protobuf-devel \
+      protobuf-compiler \
       devtoolset-7-gcc* && \
     pushd /tmp > /dev/null && \
     wget https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz && \

@@ -12,8 +12,8 @@ Release:		%{rel}.el%{?rhel}
 Group:			System Environment/Daemons
 Vendor:			LLG Ryszard Gradowski
 Packager:		LLG Ryszard Gradowski
-BuildRequires:		make, centos-release-scl, devtoolset-7-gcc-c++, devtoolset-7-gcc, devtoolset-7-gcc-plugin-devel, devtoolset-7-gcc-gdb-plugin,openssl-devel, python-devel, curl-devel, sqlite-devel, newt-devel, maven
-Requires:		curl, sqlite, newt, php-cli >= 5.4.16, java-1.8.0-openjdk
+BuildRequires:		make, centos-release-scl, devtoolset-7-gcc-c++, devtoolset-7-gcc, devtoolset-7-gcc-plugin-devel, devtoolset-7-gcc-gdb-plugin,openssl-devel, python-devel, curl-devel, sqlite-devel, newt-devel, maven, protobuf-devel = 2.5.0, protobuf-compiler = 2.5.0
+Requires:		curl, sqlite, newt, php-cli >= 5.4.16, java-1.8.0-openjdk, protobuf = 2.5.0
 Requires(preun):	systemd-units
 Requires(postun):	systemd-units
 Requires(post):		systemd-units

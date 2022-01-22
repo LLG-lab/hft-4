@@ -133,7 +133,8 @@ std::string marketplace_gateway_process::prepare_log_file(void)
 
     if (ec)
     {
-        hft_log(ERROR) << "Raised system error: ‘" << ec.message() << "’";
+        hft_log(ERROR) << "Raised system error (" << ec.value()
+                       << "): ‘" << ec.message() << "’";
     }
 
     return regular_log_file;

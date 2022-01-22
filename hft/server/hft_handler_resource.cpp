@@ -61,8 +61,8 @@ hft_handler_resource::~hft_handler_resource(void)
     }
     catch (const std::runtime_error &e)
     {
-       hft_log(ERROR) << "hft_handler_resource: Failed to save file: "
-                      << e.what();
+        hft_log(ERROR) << "hft_handler_resource: Failed to save file: "
+                       << e.what();
     }
 }
 

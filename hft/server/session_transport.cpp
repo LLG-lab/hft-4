@@ -98,8 +98,8 @@ void session_transport::handle_read(const boost::system::error_code &error)
     }
     else
     {
-        hft_log(WARNING) << "Destroying session because of error: "
-                         << error.message();
+        hft_log(WARNING) << "Destroying session because of error ("
+                         << error.value() << "): " << error.message();
 
         delete this;
     }
@@ -113,8 +113,8 @@ void session_transport::handle_write(const boost::system::error_code& error)
     }
     else
     {
-        hft_log(WARNING) << "Destroying session because of error: "
-                         << error.message();
+        hft_log(WARNING) << "Destroying session because of error ("
+                         << error.value() << "): " << error.message();
 
         delete this;
     }
