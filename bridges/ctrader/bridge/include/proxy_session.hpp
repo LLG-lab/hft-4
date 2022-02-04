@@ -14,19 +14,19 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __MARKET_SESSION_HPP__
-#define __MARKET_SESSION_HPP__
+#ifndef __PROXY_SESSION_HPP__
+#define __PROXY_SESSION_HPP__
 
-#include <ctrader_session.hpp>
+#include <proxy_core.hpp>
 
-class market_session : public ctrader_session
+class proxy_session : public proxy_core
 {
 public:
 
-    market_session(void) = delete;
-    market_session(market_session &) = delete;
-    market_session(market_session &&) = delete;
-    market_session(ctrader_ssl_connection &connection, const hft2ctrader_bridge_config &config);
+    proxy_session(void) = delete;
+    proxy_session(proxy_session &) = delete;
+    proxy_session(proxy_session &&) = delete;
+    proxy_session(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_bridge_config &config);
 
 protected:
 
@@ -42,4 +42,4 @@ private:
     const hft2ctrader_bridge_config &config_;
 };
 
-#endif /* __MARKET_SESSION_HPP__ */
+#endif /* __PROXY_SESSION_HPP__ */

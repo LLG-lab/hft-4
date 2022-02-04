@@ -16,7 +16,7 @@
 
 #include <easylogging++.h>
 
-#include <ctrader_session.hpp>
+#include <proxy_core.hpp>
 #include <aux_functions.hpp>
 
 #undef ORDER_EXECUTION_DEBUG
@@ -40,8 +40,8 @@ void display_closepositiondetail(const ProtoOAClosePositionDetail &cpd, const st
 
 } // namespace.
 
-ctrader_session::ctrader_session(ctrader_ssl_connection &connection, const hft2ctrader_bridge_config &config)
-    : ctrader_api(connection), config_(config),
+proxy_core::proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_bridge_config &config)
+    : ctrader_api {ctrader_conn}, hft_api {hft_conn}, config_{config},
       last_heartbeat_ {0ul},
       registration_timestamp_ {0ul}
 {
@@ -52,21 +52,21 @@ ctrader_session::ctrader_session(ctrader_ssl_connection &connection, const hft2c
 // Transition action methods and guards.
 //
 
-void ctrader_session::start_app_authorization(new_connection_event const &event)
+void proxy_core::start_app_authorization(ctrader_connection_event const &event)
 {
     hft2ctrader_log(INFO) << "Start application authorization.";
 
-    authorize_application(config_.get_auth_client_id(), config_.get_auth_client_secret());
+    ctrader_authorize_application(config_.get_auth_client_id(), config_.get_auth_client_secret());
 }
 
-void ctrader_session::start_account_authorization(data_event const &event)
+void proxy_core::start_account_authorization(ctrader_data_event const &event)
 {
     hft2ctrader_log(INFO) << "Start account authorization.";
 
-    authorize_account(config_.get_auth_access_token(), config_.get_auth_account_id());
+    ctrader_authorize_account(config_.get_auth_access_token(), config_.get_auth_account_id());
 }
 
-bool ctrader_session::is_app_authorized(data_event const &event)
+bool proxy_core::is_app_authorized(ctrader_data_event const &event)
 {
     ProtoMessage msg;
 
@@ -97,14 +97,14 @@ bool ctrader_session::is_app_authorized(data_event const &event)
     return false;
 }
 
-void ctrader_session::start_acquire_account_informations(data_event const &event)
+void proxy_core::start_acquire_account_informations(ctrader_data_event const &event)
 {
     hft2ctrader_log(INFO) << "Start acquire account informations.";
 
-    account_information(config_.get_auth_account_id());
+    ctrader_account_information(config_.get_auth_account_id());
 }
 
-bool ctrader_session::is_account_authorized(data_event const &event)
+bool proxy_core::is_account_authorized(ctrader_data_event const &event)
 {
     ProtoMessage msg;
 
@@ -142,14 +142,14 @@ bool ctrader_session::is_account_authorized(data_event const &event)
     return false;
 }
 
-void ctrader_session::start_acquire_instrument_informations(data_event const &event)
+void proxy_core::start_acquire_instrument_informations(ctrader_data_event const &event)
 {
     hft2ctrader_log(INFO) << "Start acquire available instrument informations.";
 
-    available_instruments(config_.get_auth_account_id());
+    ctrader_available_instruments(config_.get_auth_account_id());
 }
 
-bool ctrader_session::has_account_informations(data_event const &event)
+bool proxy_core::has_account_informations(ctrader_data_event const &event)
 {
     ProtoMessage msg;
 
@@ -220,14 +220,14 @@ bool ctrader_session::has_account_informations(data_event const &event)
     return false;
 }
 
-void ctrader_session::start_acquire_position_informations(data_event const &event)
+void proxy_core::start_acquire_position_informations(ctrader_data_event const &event)
 {
     hft2ctrader_log(INFO) << "Retrieving information about open positions";
 
-    opened_positions_list(config_.get_auth_account_id());
+    ctrader_opened_positions_list(config_.get_auth_account_id());
 }
 
-bool ctrader_session::has_instrument_informations(data_event const &event)
+bool proxy_core::has_instrument_informations(ctrader_data_event const &event)
 {
     ProtoMessage msg;
 
@@ -275,12 +275,12 @@ bool ctrader_session::has_instrument_informations(data_event const &event)
     return false;
 }
 
-void ctrader_session::initialize_bridge(data_event const &event)
+void proxy_core::initialize_bridge(ctrader_data_event const &event)
 {
     on_init();
 }
 
-bool ctrader_session::has_position_informations(data_event const &event)
+bool proxy_core::has_position_informations(ctrader_data_event const &event)
 {
     ProtoMessage msg;
 
@@ -317,7 +317,7 @@ bool ctrader_session::has_position_informations(data_event const &event)
     return false;
 }
 
-void ctrader_session::dispatch_event(data_event const &event)
+void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
 {
     ProtoMessage msg;
 
@@ -331,7 +331,7 @@ void ctrader_session::dispatch_event(data_event const &event)
     {
         hft2ctrader_log(TRACE) << "Raised heart beat";
 
-        heart_beat_ACK();
+        ctrader_heart_beat();
 
         last_heartbeat_ = now;
     }
@@ -342,7 +342,7 @@ void ctrader_session::dispatch_event(data_event const &event)
         {
             hft2ctrader_log(TRACE) << "Heart beat event";
 
-            heart_beat_ACK();
+            ctrader_heart_beat();
 
             last_heartbeat_ = now;
 
@@ -482,16 +482,21 @@ void ctrader_session::dispatch_event(data_event const &event)
             break;
         }
         default:
-            hft2ctrader_log(WARNING) << "dispatch_event: Received unhandled message from server #"
+            hft2ctrader_log(WARNING) << "dispatch_ctrader_data_event: Received unhandled message from server #"
                                      << payload_type << " – " << payload_type2str(payload_type);
     }
+}
+
+void proxy_core::dispatch_hft_data_event(hft_data_event const &event)
+{
+// FIXME: Not implemented.
 }
 
 //
 // Auxiliary private methods.
 //
 
-void ctrader_session::arrange_position(const ProtoOAPosition &pos, bool historical)
+void proxy_core::arrange_position(const ProtoOAPosition &pos, bool historical)
 {
     hft2ctrader_log(TRACE) << "****";
     hft2ctrader_log(TRACE) << "positionId: " << pos.positionid();
@@ -798,7 +803,7 @@ comment               string            optional   User-specified comment.
     }
 }
 
-void ctrader_session::handle_order_fill(const ProtoOAExecutionEvent &evt)
+void proxy_core::handle_order_fill(const ProtoOAExecutionEvent &evt)
 {
     if (evt.has_position())
     {
@@ -853,7 +858,7 @@ void ctrader_session::handle_order_fill(const ProtoOAExecutionEvent &evt)
     }
 }
 
-void ctrader_session::handle_order_reject(const ProtoOAExecutionEvent &evt)
+void proxy_core::handle_order_reject(const ProtoOAExecutionEvent &evt)
 {
     if (evt.has_errorcode())
     {
@@ -917,7 +922,7 @@ void ctrader_session::handle_order_reject(const ProtoOAExecutionEvent &evt)
 // Utility routines for market_session.
 //
 
-std::string ctrader_session::get_instrument_ticker(int instrument_id) const
+std::string proxy_core::get_instrument_ticker(int instrument_id) const
 {
     auto it = id2ticker_.find(instrument_id);
 
@@ -929,7 +934,7 @@ std::string ctrader_session::get_instrument_ticker(int instrument_id) const
     return it -> second;
 }
 
-double ctrader_session::get_free_margin(void) //const
+double proxy_core::get_free_margin(void) //const
 {
     double margin = get_balance();
     double price_diff = 0.0;
@@ -958,7 +963,7 @@ double ctrader_session::get_free_margin(void) //const
     return margin;
 }
 
-bool ctrader_session::subscribe_instruments_ex(const instruments_container &instruments)
+bool proxy_core::ctrader_subscribe_instruments_ex(const instruments_container &instruments)
 {
     instrument_id_container aux;
     bool status = true;
@@ -969,7 +974,7 @@ bool ctrader_session::subscribe_instruments_ex(const instruments_container &inst
 
         if (x == ticker2id_.end())
         {
-            hft2ctrader_log(ERROR) << "subscribe_instruments_ex: Unsupported instrument ‘"
+            hft2ctrader_log(ERROR) << "ctrader_subscribe_instruments_ex: Unsupported instrument ‘"
                                    << instr << "’";
 
             status = false;
@@ -980,12 +985,12 @@ bool ctrader_session::subscribe_instruments_ex(const instruments_container &inst
         }
     }
 
-    subscribe_instruments(aux, config_.get_auth_account_id());
+    ctrader_subscribe_instruments(aux, config_.get_auth_account_id());
 
     return status;
 }
 
-bool ctrader_session::create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume)
+bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume)
 {
     bool status = true;
     int instrument_id = 0;
@@ -993,7 +998,7 @@ bool ctrader_session::create_market_order_ex(const std::string &identifier, cons
 
     if (x == ticker2id_.end())
     {
-        hft2ctrader_log(ERROR) << "create_market_order_ex: Unsupported instrument ‘"
+        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Unsupported instrument ‘"
                                << instrument << "’";
 
         status = false;
@@ -1002,13 +1007,13 @@ bool ctrader_session::create_market_order_ex(const std::string &identifier, cons
     {
         instrument_id = x -> second;
 
-        create_market_order(identifier, instrument_id, pt, volume * 100, config_.get_auth_account_id());
+        ctrader_create_market_order(identifier, instrument_id, pt, volume * 100, config_.get_auth_account_id());
     }
 
     return status;
 }
 
-bool ctrader_session::close_position_ex(const std::string &identifier)
+bool proxy_core::ctrader_close_position_ex(const std::string &identifier)
 {
    bool status = false;
 
@@ -1018,7 +1023,7 @@ bool ctrader_session::close_position_ex(const std::string &identifier)
        {
            status = true;
 
-           close_position(p.position_id_, p.volume_ * 100, config_.get_auth_account_id());
+           ctrader_close_position(p.position_id_, p.volume_ * 100, config_.get_auth_account_id());
 
            break;
        }
@@ -1026,7 +1031,7 @@ bool ctrader_session::close_position_ex(const std::string &identifier)
 
    if (! status)
    {
-        hft2ctrader_log(ERROR) << "close_position_ex: Position identified as ‘"
+        hft2ctrader_log(ERROR) << "ctrader_close_position_ex: Position identified as ‘"
                                << identifier << "’ was not found.";
    }
 

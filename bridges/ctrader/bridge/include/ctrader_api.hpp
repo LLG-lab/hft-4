@@ -44,16 +44,16 @@ public:
     // Request methods.
     //
 
-    void heart_beat_ACK(void);
-    void authorize_application(const std::string &client_id, const std::string &client_secret);
-    void authorize_account(const std::string &access_token, int account_id);
-    void account_information(int account_id);
-    void available_instruments(int account_id);
-    void subscribe_instruments(const instrument_id_container &data, int account_id);
-    void create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id);
-    void close_position(int position_id, int volume, int account_id);
-    void opened_positions_list(int account_id);
-    void order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id);
+    void ctrader_heart_beat(void);
+    void ctrader_authorize_application(const std::string &client_id, const std::string &client_secret);
+    void ctrader_authorize_account(const std::string &access_token, int account_id);
+    void ctrader_account_information(int account_id);
+    void ctrader_available_instruments(int account_id);
+    void ctrader_subscribe_instruments(const instrument_id_container &data, int account_id);
+    void ctrader_create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id);
+    void ctrader_close_position(int position_id, int volume, int account_id);
+    void ctrader_opened_positions_list(int account_id);
+    void ctrader_order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id);
 
 private:
 

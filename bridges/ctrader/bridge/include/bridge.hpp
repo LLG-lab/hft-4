@@ -19,7 +19,7 @@
 
 #include <boost/msm/back/state_machine.hpp>
 
-#include <market_session.hpp>
+#include <proxy_session.hpp>
 
 class bridge
 {
@@ -34,34 +34,41 @@ public:
     bridge(bridge &&) = delete;
 
     bridge(boost::asio::io_context &io_context, const hft2ctrader_bridge_config &cfg)
-        : connection_ { io_context, cfg },
-          sm_ { connection_, cfg }
+        : ctrader_conn_ { io_context, cfg },
+          hft_conn_ { io_context, cfg },
+          sm_ { ctrader_conn_, hft_conn_, cfg }
     {
-        connection_.set_on_connected_callback([this](void)
+        ctrader_conn_.set_on_connected_callback([this](void)
             {
-                sm_.process_event(ctrader_session::new_connection_event());
+                sm_.process_event(proxy_core::ctrader_connection_event());
             });
 
-        connection_.set_on_error_callback([this](const boost::system::error_code &ec)
+        ctrader_conn_.set_on_error_callback([this](const boost::system::error_code &ec)
             {
-                connection_.close();
-                connection_.connect();
-                sm_.process_event(ctrader_session::error_event(ec));
+                ctrader_conn_.close();
+                ctrader_conn_.connect();
+                sm_.process_event(proxy_core::ctrader_connection_error_event(ec));
             });
 
-        connection_.set_on_data_callback([this](const std::vector<char> &data)
+        ctrader_conn_.set_on_data_callback([this](const std::vector<char> &data)
             {
-                sm_.process_event(ctrader_session::data_event(data));
+                sm_.process_event(proxy_core::ctrader_data_event(data));
             });
 
-        connection_.connect();
+        hft_conn_.set_on_data_callback([this](const std::string &data)
+            {
+                sm_.process_event(proxy_core::hft_data_event(data));
+            });
+
+        ctrader_conn_.connect();
     }
 
 private:
 
-    ctrader_ssl_connection connection_;
+    ctrader_ssl_connection ctrader_conn_;
+    hft_connection hft_conn_;
 
-    msm::back::state_machine<market_session> sm_;
+    msm::back::state_machine<proxy_session> sm_;
 };
 
 #endif /* __BRIDGE_HPP__ */

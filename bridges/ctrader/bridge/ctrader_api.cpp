@@ -16,7 +16,7 @@
 
 #include <ctrader_api.hpp>
 
-void ctrader_api::heart_beat_ACK(void)
+void ctrader_api::ctrader_heart_beat(void)
 {
     ProtoHeartbeatEvent req;
     std::string payload;
@@ -26,7 +26,7 @@ void ctrader_api::heart_beat_ACK(void)
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::authorize_application(const std::string &client_id, const std::string &client_secret)
+void ctrader_api::ctrader_authorize_application(const std::string &client_id, const std::string &client_secret)
 {
     ProtoOAApplicationAuthReq req;
     std::string payload;
@@ -38,7 +38,7 @@ void ctrader_api::authorize_application(const std::string &client_id, const std:
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::authorize_account(const std::string &access_token, int account_id)
+void ctrader_api::ctrader_authorize_account(const std::string &access_token, int account_id)
 {
     ProtoOAAccountAuthReq req;
     std::string payload;
@@ -50,7 +50,7 @@ void ctrader_api::authorize_account(const std::string &access_token, int account
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::account_information(int account_id)
+void ctrader_api::ctrader_account_information(int account_id)
 {
     ProtoOATraderReq req;
     std::string payload;
@@ -61,7 +61,7 @@ void ctrader_api::account_information(int account_id)
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::available_instruments(int account_id)
+void ctrader_api::ctrader_available_instruments(int account_id)
 {
     ProtoOASymbolsListReq req;
     std::string payload;
@@ -72,7 +72,7 @@ void ctrader_api::available_instruments(int account_id)
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::subscribe_instruments(const instrument_id_container &data, int account_id)
+void ctrader_api::ctrader_subscribe_instruments(const instrument_id_container &data, int account_id)
 {
     ProtoOASubscribeSpotsReq req;
     std::string payload;
@@ -89,7 +89,7 @@ void ctrader_api::subscribe_instruments(const instrument_id_container &data, int
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id)
+void ctrader_api::ctrader_create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id)
 {
     ProtoOANewOrderReq req;
     std::string payload;
@@ -114,7 +114,7 @@ void ctrader_api::create_market_order(const std::string &identifier, int instrum
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::close_position(int position_id, int volume, int account_id)
+void ctrader_api::ctrader_close_position(int position_id, int volume, int account_id)
 {
     ProtoOAClosePositionReq req;
     std::string payload;
@@ -128,7 +128,7 @@ void ctrader_api::close_position(int position_id, int volume, int account_id)
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id)
+void ctrader_api::ctrader_order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id)
 {
     ProtoOAOrderListReq req;
     std::string payload;
@@ -142,7 +142,7 @@ void ctrader_api::order_list(unsigned long from_timestamp, unsigned long to_time
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::opened_positions_list(int account_id)
+void ctrader_api::ctrader_opened_positions_list(int account_id)
 {
     ProtoOAReconcileReq req;
     std::string payload;

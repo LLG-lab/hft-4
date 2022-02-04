@@ -16,27 +16,27 @@
 
 #include <easylogging++.h>
 
-#include <market_session.hpp>
+#include <proxy_session.hpp>
 #include <aux_functions.hpp>
 
 #define hft2ctrader_log(__X__) \
-    CLOG(__X__, "market")
+    CLOG(__X__, "proxy")
 
 
-market_session::market_session(ctrader_ssl_connection &connection, const hft2ctrader_bridge_config &config)
-    : ctrader_session(connection, config), config_(config)
+proxy_session::proxy_session(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_bridge_config &config)
+    : proxy_core(ctrader_conn, hft_conn, config), config_(config)
 {
-    el::Loggers::getLogger("market", true);
+    el::Loggers::getLogger("proxy", true);
 }
 
-void market_session::on_init(void)
+void proxy_session::on_init(void)
 {
     hft2ctrader_log(TRACE) << "on_init – got called.";
 
-    subscribe_instruments_ex({ "EURUSD", "GBPUSD"});
+    ctrader_subscribe_instruments_ex({ "EURUSD", "GBPUSD"});
 }
 
-void market_session::on_tick(const tick_type &tick)
+void proxy_session::on_tick(const tick_type &tick)
 {
     static bool first_time = true;
 
@@ -57,7 +57,7 @@ void market_session::on_tick(const tick_type &tick)
     hft2ctrader_log(TRACE) << "Free margin: " << get_free_margin();
 }
 
-void market_session::on_position_open(const position_info &position)
+void proxy_session::on_position_open(const position_info &position)
 {
     hft2ctrader_log(INFO) << "New position OPENED:";
     hft2ctrader_log(INFO) << "    identifier:  ‘" << position.label_ << "’";
@@ -86,7 +86,7 @@ void market_session::on_position_open(const position_info &position)
     // TODO: Not implemented.
 }
 
-void market_session::on_position_open_error(const order_error_info &order_error)
+void proxy_session::on_position_open_error(const order_error_info &order_error)
 {
     hft2ctrader_log(INFO) << "Open position ERROR:";
     hft2ctrader_log(INFO) << "    identifier:  ‘" << order_error.label_ << "’";
@@ -96,7 +96,7 @@ void market_session::on_position_open_error(const order_error_info &order_error)
     // TODO: Not implemented.
 }
 
-void market_session::on_position_close(const closed_position_info &closed_position)
+void proxy_session::on_position_close(const closed_position_info &closed_position)
 {
     hft2ctrader_log(INFO) << "Position CLOSED:";
     hft2ctrader_log(INFO) << "    identifier:  ‘" << closed_position.label_ << "’";
@@ -106,7 +106,7 @@ void market_session::on_position_close(const closed_position_info &closed_positi
     // TODO: Not implemented.
 }
 
-void market_session::on_position_close_error(const order_error_info &order_error)
+void proxy_session::on_position_close_error(const order_error_info &order_error)
 {
     hft2ctrader_log(INFO) << "Close position ERROR:";
     hft2ctrader_log(INFO) << "    identifier:  ‘" << order_error.label_ << "’";
