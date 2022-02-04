@@ -30,9 +30,12 @@ public:
 
 protected:
 
-    virtual void on_init(void);
-    virtual void on_tick(const tick_type &tick);
-    virtual void on_order_execution_event(const ProtoOAExecutionEvent &event);
+    virtual void on_init(void) override;
+    virtual void on_tick(const tick_type &tick) override;
+    virtual void on_position_open(const position_info &position) override;
+    virtual void on_position_open_error(const order_error_info &order_error) override;
+    virtual void on_position_close(const closed_position_info &closed_position) override;
+    virtual void on_position_close_error(const order_error_info &order_error) override;
 
 private:
 

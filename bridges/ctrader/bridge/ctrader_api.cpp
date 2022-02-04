@@ -89,7 +89,7 @@ void ctrader_api::subscribe_instruments(const instrument_id_container &data, int
     send_message(req.payloadtype(), payload);
 }
 
-void ctrader_api::create_market_order(const std::string &position_id, int instrument_id, position_type pt, int volume, int account_id)
+void ctrader_api::create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id)
 {
     ProtoOANewOrderReq req;
     std::string payload;
@@ -98,7 +98,7 @@ void ctrader_api::create_market_order(const std::string &position_id, int instru
     req.set_symbolid(instrument_id);
     req.set_ordertype(MARKET);
     req.set_volume(volume);
-    req.set_clientorderid(position_id);
+    req.set_label(identifier);
 
     if (pt == position_type::LONG_POSITION)
     {
@@ -108,6 +108,46 @@ void ctrader_api::create_market_order(const std::string &position_id, int instru
     {
         req.set_tradeside(SELL);
     }
+
+    req.SerializeToString(&payload);
+
+    send_message(req.payloadtype(), payload);
+}
+
+void ctrader_api::close_position(int position_id, int volume, int account_id)
+{
+    ProtoOAClosePositionReq req;
+    std::string payload;
+
+    req.set_ctidtraderaccountid(account_id);
+    req.set_volume(volume);
+    req.set_positionid(position_id);
+
+    req.SerializeToString(&payload);
+
+    send_message(req.payloadtype(), payload);
+}
+
+void ctrader_api::order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id)
+{
+    ProtoOAOrderListReq req;
+    std::string payload;
+
+    req.set_ctidtraderaccountid(account_id);
+    req.set_fromtimestamp(from_timestamp);
+    req.set_totimestamp(to_timestamp);
+
+    req.SerializeToString(&payload);
+
+    send_message(req.payloadtype(), payload);
+}
+
+void ctrader_api::opened_positions_list(int account_id)
+{
+    ProtoOAReconcileReq req;
+    std::string payload;
+
+    req.set_ctidtraderaccountid(account_id);
 
     req.SerializeToString(&payload);
 

@@ -23,6 +23,7 @@
 #include <OpenApiCommonModelMessages.pb.h>
 
 #include <vector>
+#include <market_types.hpp>
 #include <ctrader_ssl_connection.hpp>
 
 class ctrader_api
@@ -32,22 +33,12 @@ public:
     ctrader_api(void) = delete;
     ctrader_api(ctrader_api &) = delete;
     ctrader_api(ctrader_api &&) = delete;
+
     ctrader_api(ctrader_ssl_connection &connection)
         : connection_(connection)
     {}
+
     virtual ~ctrader_api(void) = default;
-
-    //
-    // Auxiliary types.
-    //
-
-    typedef std::vector<int> instrument_id_container;
-
-    enum class position_type
-    {
-        LONG_POSITION,
-        SHORT_POSITION
-    };
 
     //
     // Request methods.
@@ -59,7 +50,10 @@ public:
     void account_information(int account_id);
     void available_instruments(int account_id);
     void subscribe_instruments(const instrument_id_container &data, int account_id);
-    void create_market_order(const std::string &position_id, int instrument_id, position_type pt, int volume, int account_id);
+    void create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id);
+    void close_position(int position_id, int volume, int account_id);
+    void opened_positions_list(int account_id);
+    void order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id);
 
 private:
 

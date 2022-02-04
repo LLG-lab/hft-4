@@ -14,54 +14,41 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __HFT_SERVER_CONFIG__
-#define __HFT_SERVER_CONFIG__
+#ifndef __HFT_API_HPP__
+#define __HFT_API_HPP__
 
+#include <market_types.hpp>
+#include <hft_connection.hpp>
 #include <string>
-
-////////// do przerzucenia potem gdzie indziej
 #include <vector>
 
-struct external_alert_config
-{
-    external_alert_config(void)
-        : enabled { false },
-          sandbox { false }
-    {}
-
-    bool enabled;
-    bool sandbox;
-    std::string login;
-    std::string password;
-    std::vector<std::string> recipients;
-};
-//////////////////////////////////////////////
-
-class hft_server_config
+class hft_api
 {
 public:
 
-    hft_server_config(const std::string &xml_file_name = "/var/log/hft/server.log");
-    ~hft_server_config(void) = default;
+    hft_api(void) = delete;
+    hft_api(hft_api &) = delete;
+    hft_api(hft_api &&) = delete;
 
-    std::string get_logging_config(void) const;
-    const external_alert_config &get_external_alert_config(void) const { return eac_; }
+    hft_api(hft_connection &connection)
+        : connection_ {connection}
+    {}
+
+    virtual ~hft_api(void) = default;
+
+    //
+    // Request methods.
+    //
+
+    void hft_init_session(const std::string &sessid, const instruments_container &instruments);
+    void hft_sync(const std::string &instrument, unsigned long timestamp, const std::string &identifier, position_type direction, double price, int volume);
+    void hft_send_tick(const std::string &instrument, unsigned long timestamp, double ask, double bid, double equity, double free_margin);
+    void hft_send_open_notify(const std::string &instrument, const std::string &identifier, bool status, double price);
+    void hft_send_close_notify(const std::string &instrument, const std::string &identifier, bool status, double price);
 
 private:
 
-    enum logging_severity
-    {
-        HFT_SEVERITY_FATAL   = 0,
-        HFT_SEVERITY_ERROR   = 1,
-        HFT_SEVERITY_WARNING = 2,
-        HFT_SEVERITY_INFO    = 3,
-        HFT_SEVERITY_TRACE   = 4,
-        HFT_SEVERITY_DEBUG   = 5
-    };
+    hft_connection &connection_;
+};
 
-    logging_severity log_severity_;
-    external_alert_config eac_;
-}; 
-
-#endif /* __HFT_SERVER_CONFIG__ */
-
+#endif /* __HFT_API_HPP__ */

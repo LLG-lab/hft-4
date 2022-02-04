@@ -19,6 +19,8 @@
 #include <ctrader_session.hpp>
 #include <aux_functions.hpp>
 
+#undef ORDER_EXECUTION_DEBUG
+
 #define hft2ctrader_log(__X__) \
     CLOG(__X__, "session")
 
@@ -26,11 +28,22 @@ namespace {
 
 std::string payload_type2str(uint payload_type);
 
+#ifdef ORDER_EXECUTION_DEBUG
+void display_execution_event(const ProtoOAExecutionEvent &event);
+void display_protooaposition(const ProtoOAPosition &pos, const std::string &prepend);
+void display_tradedata(const ProtoOATradeData &tradedata, const std::string &prepend);
+void display_protooaorder(const ProtoOAOrder &order, const std::string &prepend);
+void display_protooadeal(const ProtoOADeal &deal, const std::string &prepend);
+void display_closepositiondetail(const ProtoOAClosePositionDetail &cpd, const std::string &prepend);
+#endif /* ORDER_EXECUTION_DEBUG */
+
+
 } // namespace.
 
 ctrader_session::ctrader_session(ctrader_ssl_connection &connection, const hft2ctrader_bridge_config &config)
     : ctrader_api(connection), config_(config),
-      last_heartbeat_(0ul)
+      last_heartbeat_ {0ul},
+      registration_timestamp_ {0ul}
 {
    el::Loggers::getLogger("session", true);
 }
@@ -71,12 +84,8 @@ bool ctrader_session::is_app_authorized(data_event const &event)
         }
         case PROTO_OA_ERROR_RES:
         {
-            ProtoErrorRes res;
-            res.ParseFromString(payload);
-
-            hft2ctrader_log(ERROR) << "Application authorization ERROR ("
-                                   << res.errorcode() << ") – "
-                                   << res.description();
+            hft2ctrader_log(ERROR) << "Application authorization ERROR:\n"
+                                   << aux::hexdump(payload);
 
             throw std::runtime_error("Application authorization failed");
         }
@@ -120,12 +129,8 @@ bool ctrader_session::is_account_authorized(data_event const &event)
         }
         case PROTO_OA_ERROR_RES:
         {
-            ProtoErrorRes res;
-            res.ParseFromString(payload);
-
-            hft2ctrader_log(ERROR) << "Account authorization ERROR ("
-                                   << res.errorcode() << ") – "
-                                   << res.description();
+            hft2ctrader_log(ERROR) << "Account authorization ERROR:\n"
+                                   << aux::hexdump(payload);
 
             throw std::runtime_error("Account authorization failed");
         }
@@ -189,16 +194,20 @@ bool ctrader_session::has_account_informations(data_event const &event)
                                       << res.trader().brokername();
             }
 
+            if (res.trader().has_registrationtimestamp())
+            {
+                hft2ctrader_log(INFO) << "    Account opened: "
+                                      << aux::timestamp2string(res.trader().registrationtimestamp());
+
+                registration_timestamp_ = res.trader().registrationtimestamp();
+            }
+
             return true;
         }
         case PROTO_OA_ERROR_RES:
         {
-            ProtoErrorRes res;
-            res.ParseFromString(payload);
-
-            hft2ctrader_log(ERROR) << "Account information acquisition ERROR ("
-                                   << res.errorcode() << ") – "
-                                   << res.description();
+            hft2ctrader_log(ERROR) << "Account information acquisition ERROR:\n"
+                                   << aux::hexdump(payload);
 
             throw std::runtime_error("Account information acquisition failed");
         }
@@ -211,9 +220,11 @@ bool ctrader_session::has_account_informations(data_event const &event)
     return false;
 }
 
-void ctrader_session::initialize_bridge(data_event const &event)
+void ctrader_session::start_acquire_position_informations(data_event const &event)
 {
-    on_init();
+    hft2ctrader_log(INFO) << "Retrieving information about open positions";
+
+    opened_positions_list(config_.get_auth_account_id());
 }
 
 bool ctrader_session::has_instrument_informations(data_event const &event)
@@ -251,17 +262,55 @@ bool ctrader_session::has_instrument_informations(data_event const &event)
         }
         case PROTO_OA_ERROR_RES:
         {
-            ProtoErrorRes res;
-            res.ParseFromString(payload);
-
-            hft2ctrader_log(ERROR) << "Acquisition of available instruments information ERROR ("
-                                   << res.errorcode() << ") – "
-                                   << res.description();
+            hft2ctrader_log(ERROR) << "Acquisition of available instruments information ERROR:\n"
+                                   << aux::hexdump(payload);
 
             throw std::runtime_error("Acquisition of available instruments information failed");
         }
         default:
             hft2ctrader_log(WARNING) << "has_instrument_informations: Received unhandled message from server #"
+                                     << payload_type;
+    }
+
+    return false;
+}
+
+void ctrader_session::initialize_bridge(data_event const &event)
+{
+    on_init();
+}
+
+bool ctrader_session::has_position_informations(data_event const &event)
+{
+    ProtoMessage msg;
+
+    msg.ParseFromArray(&event.data_.front(), event.data_.size());
+    uint payload_type   = msg.payloadtype();
+    std::string payload = msg.payload();
+
+    switch (payload_type)
+    {
+        case PROTO_OA_RECONCILE_RES:
+        {
+            ProtoOAReconcileRes res;
+            res.ParseFromString(payload);
+
+            for (int i = 0; i < res.position_size(); i++)
+            {
+                arrange_position(res.position(i), true);
+            }
+
+            return true;
+        }
+        case PROTO_OA_ERROR_RES:
+        {
+            hft2ctrader_log(ERROR) << "Acquisition of open positions information ERROR:\n"
+                                   << aux::hexdump(payload);
+
+            throw std::runtime_error("Acquisition of open positions information failed");
+        }
+        default:
+            hft2ctrader_log(WARNING) << "has_position_informations: Received unhandled message from server #"
                                      << payload_type;
     }
 
@@ -372,17 +421,26 @@ void ctrader_session::dispatch_event(data_event const &event)
             ProtoOAExecutionEvent evt;
             evt.ParseFromString(payload);
 
+            #ifdef ORDER_EXECUTION_DEBUG
+            display_execution_event(evt);
+            #endif
+
             switch (evt.executiontype())
             {
                 case ORDER_ACCEPTED:
+                         break;
                 case ORDER_FILLED:
+                case ORDER_PARTIAL_FILL:
+                         handle_order_fill(evt);
+                         break;
                 case ORDER_REPLACED:
+                         break;
                 case ORDER_CANCELLED:
                 case ORDER_EXPIRED:
                 case ORDER_REJECTED:
+                         handle_order_reject(evt);
+                         break;
                 case ORDER_CANCEL_REJECTED:
-                case ORDER_PARTIAL_FILL:
-                         on_order_execution_event(evt);
                          break;
                 default:
                          break;
@@ -418,14 +476,8 @@ void ctrader_session::dispatch_event(data_event const &event)
         }
         case PROTO_OA_ERROR_RES:
         {
-            ProtoErrorRes res;
-            res.ParseFromString(payload);
-
-            hft2ctrader_log(ERROR) << "Response ERROR ("
-                                   << res.errorcode() << ") – "
-                                   << res.description();
-
-            // FIXME: W zależności od kodu błedu, można potem wołać jakieś handlery ewentualnie.
+            hft2ctrader_log(ERROR) << "Response ERROR:\n"
+                                   << aux::hexdump(payload);
 
             break;
         }
@@ -436,12 +488,480 @@ void ctrader_session::dispatch_event(data_event const &event)
 }
 
 //
+// Auxiliary private methods.
+//
+
+void ctrader_session::arrange_position(const ProtoOAPosition &pos, bool historical)
+{
+    hft2ctrader_log(TRACE) << "****";
+    hft2ctrader_log(TRACE) << "positionId: " << pos.positionid();
+
+    switch (pos.positionstatus())
+    {
+        case POSITION_STATUS_OPEN:
+            hft2ctrader_log(TRACE) << "positionStatus: POSITION_STATUS_OPEN";
+
+            break;
+        case POSITION_STATUS_CLOSED:
+            hft2ctrader_log(TRACE) << "positionStatus: POSITION_STATUS_CLOSED";
+
+            for (auto it = positions_.begin(); it != positions_.end(); it++)
+            {
+                if (it -> position_id_ == pos.positionid())
+                {
+                    hft2ctrader_log(INFO) << "Removed position #"
+                                          << it -> position_id_
+                                          << " i.e. ‘" << it -> label_
+                                          << "’, instrument ‘"
+                                          << id2ticker_[it -> instrument_id_]
+                                          << "’.";
+
+                    positions_.erase(it);
+
+                    break;
+                }
+            }
+
+            return; // Nothing to do after deletion from the positions_ list.
+        case POSITION_STATUS_CREATED: // Empty position is created for pending order.
+            hft2ctrader_log(TRACE) << "positionStatus: POSITION_STATUS_CREATED";
+
+            return; // Nothing to do here.
+        case POSITION_STATUS_ERROR:
+            hft2ctrader_log(TRACE) << "positionStatus: POSITION_STATUS_ERROR";
+
+            return; // Nothing to do here.
+    }
+
+    int money_divisor = 1;
+
+    if (pos.has_moneydigits())
+    {
+        hft2ctrader_log(TRACE) << "moneyDigits: " << pos.moneydigits();
+
+        int md = pos.moneydigits();
+
+        while (md--) money_divisor *= 10;
+    }
+
+    position_info pinfo;
+
+/*
+  Field                  Type                        Label         Description
+-------------------------------------------------------------------------------------------------------------------
+positionid	            int64	                    required	The unique ID of the position. Note: trader might have
+                                                                two positions with the same id if positions are taken
+                                                                from accounts from different brokers.
+                                                                ---
+tradedata	            ProtoOATradeData	        required	Position details. See ProtoOATradeData for details.
+                                                                --- 
+positiondtatus	        ProtoOAPositionStatus	    required	Current status of the position.
+                                                                ---
+swap	                int64	                    required	Total amount of charged swap on open position.
+                                                                ---
+price	                double	                    optional	VWAP price of the position based on all executions
+                                                                (orders) linked to the position.
+                                                                ---
+stoploss	            double	                    optional	Current stop loss price.
+                                                                --- 
+takeprofit	            double	                    optional	Current take profit price.
+                                                                ---
+utclastupdatetimestamp	int64	                    optional	Time of the last change of the position, including
+                                                                amend SL/TP of the position, execution of related
+                                                                order, cancel or related order, etc.
+                                                                ---
+commission	            int64	                    optional	Current unrealized commission related to the position.
+                                                                ---
+marginrate	            double	                    optional	Rate for used margin computation. Represented as Base/Deposit.
+                                                                ---
+mirroringcommission	    int64	                    optional	Amount of unrealized commission related to
+                                                                following of strategy provider.
+                                                                ---
+guaranteedstoploss	    bool	                    optional	If TRUE then position's stop loss is guaranteedStopLoss.
+                                                                ---
+usedmargin	            uint64	                    optional	Amount of margin used for the position in deposit currency.
+                                                                ---
+stoplosstriggermethod	ProtoOAOrderTriggerMethod	optional	Stop trigger method for SL/TP of the position. Default: TRADE
+                                                                ---
+moneydigits	            uint32	                    optional	Specifies the exponent of the monetary values.
+                                                                E.g. moneyDigits = 8 must be interpret as business
+                                                                value multiplied by 10^8, then real balance
+                                                                would be 10053099944 / 10^8 = 100.53099944.
+                                                                Affects swap, commission, mirroringCommission, usedMargin.
+                                                                ---
+trailingstoploss	    bool	                    optional	If TRUE then the Trailing Stop Loss is applied.
+*/
+
+    pinfo.position_id_ = pos.positionid();
+
+    //
+    // Processing tradeData field.
+    //
+
+    hft2ctrader_log(TRACE) << "tradeData:";
+
+/*
+   Field               Type              Label       Description
+------------------------------------------------------------------------
+symbolid	          int64             required   The unique identifier of the symbol in specific server
+                                                   environment within cTrader platform. Different brokers
+                                                   might have different IDs.
+                                                   ---
+volume	              int64             required   Volume in cents.
+                                                   ---
+tradeside	          ProtoOATradeSide  required   Buy, Sell.
+                                                   ---
+opentimestamp         int64             optional   Time when position was opened or order was created.
+                                                   ---
+label                 string            optional   Text label specified during order request.
+                                                   ---
+guaranteedstoploss	  bool              optional   If TRUE then position/order stop loss is guaranteedStopLoss.
+                                                   ---
+comment               string            optional   User-specified comment.
+
+*/
+
+    hft2ctrader_log(TRACE) << "    symbolId: " << pos.tradedata().symbolid();
+    pinfo.instrument_id_ = pos.tradedata().symbolid();
+
+    hft2ctrader_log(TRACE) << "    volume: " << pos.tradedata().volume();
+    pinfo.volume_ = pos.tradedata().volume() / 100;
+
+    switch (pos.tradedata().tradeside())
+    {
+        case BUY:
+            hft2ctrader_log(TRACE) << "    tradeSide: BUY";
+            pinfo.trade_side_ = position_type::LONG_POSITION;
+
+            break;
+        case SELL:
+            hft2ctrader_log(TRACE) << "    tradeSide: SELL";
+            pinfo.trade_side_ = position_type::SHORT_POSITION;
+
+            break;
+    }
+
+    if (pos.tradedata().has_opentimestamp())
+    {
+        hft2ctrader_log(TRACE) << "    openTimestamp: "
+                               << pos.tradedata().opentimestamp();
+
+        pinfo.timestamp_ = pos.tradedata().opentimestamp();
+    }
+
+    if (pos.tradedata().has_label())
+    {
+        hft2ctrader_log(TRACE) << "    label: " << pos.tradedata().label();
+
+        pinfo.label_ = pos.tradedata().label();
+    }
+
+    if (pos.tradedata().has_guaranteedstoploss())
+    {
+        hft2ctrader_log(TRACE) << "    guaranteedStopLoss: "
+                               << (pos.tradedata().guaranteedstoploss() ? "YES" : "NO");
+    }
+
+    if (pos.tradedata().has_comment())
+    {
+        hft2ctrader_log(TRACE) << "   comment: ‘"
+                               << pos.tradedata().comment() << "’";
+    }
+
+    //
+    // End of tradeData.
+    //
+
+    hft2ctrader_log(TRACE) << "swap: " << pos.swap();
+
+    pinfo.swap_ = double(pos.swap()) / money_divisor;
+
+    if (pos.has_price())
+    {
+        hft2ctrader_log(TRACE) << "price: " << pos.price();
+
+        pinfo.execution_price_ = pos.price();
+    }
+
+    if (pos.has_stoploss())
+    {
+        hft2ctrader_log(TRACE) << "stopLoss: " << pos.stoploss();
+    }
+
+    if (pos.has_takeprofit())
+    {
+        hft2ctrader_log(TRACE) << "takeProfit: " << pos.takeprofit();
+    }
+
+    if (pos.has_utclastupdatetimestamp())
+    {
+        hft2ctrader_log(TRACE) << "utcLastUpdateTimestamp: "
+                               << pos.utclastupdatetimestamp();
+    }
+
+    if (pos.has_commission())
+    {
+        hft2ctrader_log(TRACE) << "commission: " << pos.commission();
+
+        pinfo.commission_ = double(pos.commission()) / money_divisor;
+    }
+
+    if (pos.has_marginrate())
+    {
+        hft2ctrader_log(TRACE) << "marginRate: " << pos.marginrate();
+    }
+
+    if (pos.has_mirroringcommission())
+    {
+        hft2ctrader_log(TRACE) << "mirroringCommission: "
+                               << pos.mirroringcommission();
+    }
+
+    if (pos.has_guaranteedstoploss())
+    {
+        hft2ctrader_log(TRACE) << "guaranteedStopLoss: "
+                               << (pos.guaranteedstoploss() ? "yes" : "no");
+    }
+
+    if (pos.has_usedmargin())
+    {
+        hft2ctrader_log(TRACE) << "usedMargin: " << pos.usedmargin();
+
+        pinfo.used_margin_ = double(pos.usedmargin()) / money_divisor;
+    }
+
+    if (pos.has_stoplosstriggermethod())
+    {
+        switch (pos.stoplosstriggermethod())
+        {
+            case TRADE:
+                // Stop Order: buy is triggered by ask, sell by bid;
+                // Stop Loss Order: for buy position is triggered
+                // by bid and for sell position by ask.
+
+                hft2ctrader_log(TRACE) << "stopLossTriggerMethod: TRADE";
+
+                break;
+            case OPPOSITE:
+                // Stop Order: buy is triggered by bid, sell by ask;
+                // Stop Loss Order: for buy position is triggered
+                // by ask and for sell position by bid.
+
+                hft2ctrader_log(TRACE) << "stopLossTriggerMethod: OPPOSITE";
+
+                break;
+            case DOUBLE_TRADE:
+                // The same as TRADE, but trigger is checked
+                // after the second consecutive tick.
+
+                hft2ctrader_log(TRACE) << "stopLossTriggerMethod: DOUBLE_TRADE";
+
+                break;
+            case DOUBLE_OPPOSITE:
+                // The same as OPPOSITE, but trigger is checked
+                // after the second consecutive tick.
+
+                hft2ctrader_log(TRACE) << "stopLossTriggerMethod: DOUBLE_OPPOSITE";
+
+                break;
+        }
+    }
+
+    if (pos.has_trailingstoploss())
+    {
+        hft2ctrader_log(TRACE) << "trailingStopLoss: "
+                               << pos.trailingstoploss();
+    }
+
+    auto it = positions_.begin();
+
+    while (it != positions_.end())
+    {
+        if (it -> position_id_ == pinfo.position_id_)
+        {
+            (*it) = pinfo;
+
+            break;
+        }
+
+        it++;
+    }
+
+    if (it == positions_.end())
+    {
+        positions_.push_back(pinfo);
+    }
+
+    if (! historical)
+    {
+        on_position_open(pinfo);
+    }
+}
+
+void ctrader_session::handle_order_fill(const ProtoOAExecutionEvent &evt)
+{
+    if (evt.has_position())
+    {
+        auto &pos = evt.position();
+
+        arrange_position(pos, false);
+
+        if (pos.positionstatus() == POSITION_STATUS_CLOSED)
+        {
+            closed_position_info cpi;
+
+            cpi.instrument_id_ = pos.tradedata().symbolid();
+
+            if (pos.tradedata().has_label())
+            {
+                cpi.label_ = pos.tradedata().label();
+            }
+
+            if (evt.has_deal())
+            {
+                auto &deal = evt.deal();
+
+                if (deal.has_executionprice())
+                {
+                    cpi.execution_price_ = deal.executionprice();
+                }
+
+                //
+                // Update account balance before call
+                // ‘on_position_close’ handler.
+                //
+
+                if (deal.has_closepositiondetail())
+                {
+                    auto &cpd = deal.closepositiondetail();
+
+                    int money_divisor = 1;
+
+                    if (cpd.has_moneydigits())
+                    {
+                        int md = cpd.moneydigits();
+
+                        while (md--) money_divisor *= 10;
+                    }
+
+                    account_balance_ = double(cpd.balance()) / money_divisor;
+                }
+            }
+
+            on_position_close(cpi);
+        }
+    }
+}
+
+void ctrader_session::handle_order_reject(const ProtoOAExecutionEvent &evt)
+{
+    if (evt.has_errorcode())
+    {
+        order_error_info oei;
+
+        oei.error_message_ = evt.errorcode();
+
+        if (evt.has_position())
+        {
+            auto &pos = evt.position();
+
+            oei.instrument_id_ = pos.tradedata().symbolid();
+
+            if (pos.tradedata().has_label())
+            {
+                oei.label_ = pos.tradedata().label();
+            }
+
+            switch (pos.positionstatus())
+            {
+                case POSITION_STATUS_CLOSED:
+                {
+                    //
+                    // We assume that the error resulted from
+                    // an attempt to open a position.
+                    //
+
+                    on_position_open_error(oei);
+
+                    break;
+                }
+                case POSITION_STATUS_OPEN:
+                {
+                    //
+                    // We assume that the error resulted from
+                    // an attempt to close a position.
+                    //
+
+                    on_position_close_error(oei);
+
+                    break;
+                }
+                case POSITION_STATUS_CREATED:
+                {
+                    hft2ctrader_log(TRACE) << "handle_order_reject: Don't know what to do with ‘POSITION_STATUS_CREATED’";
+
+                    break;
+                }
+                case POSITION_STATUS_ERROR:
+                {
+                    hft2ctrader_log(TRACE) << "handle_order_reject: Don't know what to do with ‘POSITION_STATUS_ERROR’";
+
+                    break;
+                }
+            }
+        }
+    }
+}
+
+//
 // Utility routines for market_session.
 //
 
-void ctrader_session::subscribe_instruments_ex(const instruments_container &instruments)
+std::string ctrader_session::get_instrument_ticker(int instrument_id) const
+{
+    auto it = id2ticker_.find(instrument_id);
+
+    if (it == id2ticker_.end())
+    {
+        throw std::invalid_argument("Unrecognized instrument id: " + std::to_string(instrument_id));
+    }
+
+    return it -> second;
+}
+
+double ctrader_session::get_free_margin(void) //const
+{
+    double margin = get_balance();
+    double price_diff = 0.0;
+
+    for (auto &x : positions_)
+    {
+        margin -= x.used_margin_;
+
+        if (x.trade_side_ == position_type::LONG_POSITION)
+        {
+            price_diff = x.execution_price_ - instruments_tick_[x.instrument_id_].bid;
+        }
+        else if (x.trade_side_ == position_type::SHORT_POSITION)
+        {
+            price_diff = x.execution_price_ - instruments_tick_[x.instrument_id_].ask;
+        }
+
+        margin += price_diff * x.volume_;
+        margin += 2.0*x.commission_;
+        margin += x.swap_;
+/* FIXME: Trzeba jeszcze rozkminić czy to będzie poprawnie działać
+ *        gdy pozycja nie będzie denominowana w USD. przeliczać po kursie?
+ */
+    }
+
+    return margin;
+}
+
+bool ctrader_session::subscribe_instruments_ex(const instruments_container &instruments)
 {
     instrument_id_container aux;
+    bool status = true;
 
     for (auto &instr : instruments)
     {
@@ -451,6 +971,8 @@ void ctrader_session::subscribe_instruments_ex(const instruments_container &inst
         {
             hft2ctrader_log(ERROR) << "subscribe_instruments_ex: Unsupported instrument ‘"
                                    << instr << "’";
+
+            status = false;
         }
         else
         {
@@ -459,10 +981,13 @@ void ctrader_session::subscribe_instruments_ex(const instruments_container &inst
     }
 
     subscribe_instruments(aux, config_.get_auth_account_id());
+
+    return status;
 }
 
-void ctrader_session::create_market_order_ex(const std::string &position_id, const std::string &instrument, position_type pt, int volume)
+bool ctrader_session::create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume)
 {
+    bool status = true;
     int instrument_id = 0;
     auto x = ticker2id_.find(instrument);
 
@@ -470,13 +995,42 @@ void ctrader_session::create_market_order_ex(const std::string &position_id, con
     {
         hft2ctrader_log(ERROR) << "create_market_order_ex: Unsupported instrument ‘"
                                << instrument << "’";
+
+        status = false;
     }
     else
     {
         instrument_id = x -> second;
+
+        create_market_order(identifier, instrument_id, pt, volume * 100, config_.get_auth_account_id());
     }
 
-    create_market_order(position_id, instrument_id, pt, volume, config_.get_auth_account_id());
+    return status;
+}
+
+bool ctrader_session::close_position_ex(const std::string &identifier)
+{
+   bool status = false;
+
+   for (auto &p : positions_)
+   {
+       if (p.label_ == identifier)
+       {
+           status = true;
+
+           close_position(p.position_id_, p.volume_ * 100, config_.get_auth_account_id());
+
+           break;
+       }
+   }
+
+   if (! status)
+   {
+        hft2ctrader_log(ERROR) << "close_position_ex: Position identified as ‘"
+                               << identifier << "’ was not found.";
+   }
+
+   return status;
 }
 
 //
@@ -572,5 +1126,796 @@ std::string payload_type2str(uint payload_type)
 
     return "";
 }
+
+//
+// Log dump execution event data for debuging purposes.
+//
+
+#ifdef ORDER_EXECUTION_DEBUG
+
+void display_execution_event(const ProtoOAExecutionEvent &event)
+{
+    hft2ctrader_log(DEBUG) << "Execution event:";
+
+    switch (event.executiontype())
+    {
+        case ORDER_ACCEPTED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_ACCEPTED";
+             break;
+        case ORDER_FILLED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_FILLED";
+             break;
+        case ORDER_REPLACED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_REPLACED";
+             break;
+        case ORDER_CANCELLED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_CANCELLED";
+             break;
+        case ORDER_EXPIRED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_EXPIRED";
+             break;
+        case ORDER_REJECTED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_REJECTED";
+             break;
+        case ORDER_CANCEL_REJECTED:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_CANCEL_REJECTED";
+             break;
+        case ORDER_PARTIAL_FILL:
+             hft2ctrader_log(DEBUG) << "\texecutionType: ORDER_PARTIAL_FILL";
+             break;
+    }
+
+    if (event.has_errorcode())
+    {
+        //
+        // The name of the ProtoErrorCode or the other
+        // custom ErrorCodes (e.g. ProtoCHErrorCode).
+        //
+
+        hft2ctrader_log(DEBUG) << "\terrorCode: " << event.errorcode();
+    }
+
+    if (event.has_position())
+    {
+        hft2ctrader_log(DEBUG) << "\tposition:";
+        display_protooaposition(event.position(), "\t\t");
+    }
+
+    if (event.has_order())
+    {
+        hft2ctrader_log(DEBUG) << "\torder:";
+        display_protooaorder(event.order(), "\t\t");
+    }
+
+    if (event.has_deal())
+    {
+        hft2ctrader_log(DEBUG) << "\tdeal:";
+        display_protooadeal(event.deal(), "\t\t");
+    }
+
+    //
+    // bonusDepositWithdraw and depositWithdraw
+    // was deliberately omitted.
+    //
+
+    if (event.has_isserverevent())
+    {
+        //
+        // If TRUE then the event generated by the
+        // server logic instead of the trader's
+        // request. (e.g. stop-out).
+        //
+
+        hft2ctrader_log(DEBUG) << "\tisServerEvent: "
+                               << (event.isserverevent() ? "YES" : "NO");
+    }
+}
+
+void display_protooaposition(const ProtoOAPosition &pos, const std::string &prepend)
+{
+/*
+  Field                  Type                        Label         Description
+-------------------------------------------------------------------------------------------------------------------
+positionid	            int64	                    required	The unique ID of the position. Note: trader might have
+                                                                two positions with the same id if positions are taken
+                                                                from accounts from different brokers.
+                                                                ---
+tradedata	            ProtoOATradeData	        required	Position details. See ProtoOATradeData for details.
+                                                                --- 
+positiondtatus	        ProtoOAPositionStatus	    required	Current status of the position.
+                                                                ---
+swap	                int64	                    required	Total amount of charged swap on open position.
+                                                                ---
+price	                double	                    optional	VWAP price of the position based on all executions
+                                                                (orders) linked to the position.
+                                                                ---
+stoploss	            double	                    optional	Current stop loss price.
+                                                                --- 
+takeprofit	            double	                    optional	Current take profit price.
+                                                                ---
+utclastupdatetimestamp	int64	                    optional	Time of the last change of the position, including
+                                                                amend SL/TP of the position, execution of related
+                                                                order, cancel or related order, etc.
+                                                                ---
+commission	            int64	                    optional	Current unrealized commission related to the position.
+                                                                ---
+marginrate	            double	                    optional	Rate for used margin computation. Represented as Base/Deposit.
+                                                                ---
+mirroringcommission	    int64	                    optional	Amount of unrealized commission related to
+                                                                following of strategy provider.
+                                                                ---
+guaranteedstoploss	    bool	                    optional	If TRUE then position's stop loss is guaranteedStopLoss.
+                                                                ---
+usedmargin	            uint64	                    optional	Amount of margin used for the position in deposit currency.
+                                                                ---
+stoplosstriggermethod	ProtoOAOrderTriggerMethod	optional	Stop trigger method for SL/TP of the position. Default: TRADE
+                                                                ---
+moneydigits	            uint32	                    optional	Specifies the exponent of the monetary values.
+                                                                E.g. moneyDigits = 8 must be interpret as business
+                                                                value multiplied by 10^8, then real balance
+                                                                would be 10053099944 / 10^8 = 100.53099944.
+                                                                Affects swap, commission, mirroringCommission, usedMargin.
+                                                                ---
+trailingstoploss	    bool	                    optional	If TRUE then the Trailing Stop Loss is applied.
+*/
+    hft2ctrader_log(DEBUG) << prepend << "positionId: " << pos.positionid();
+    hft2ctrader_log(DEBUG) << prepend << "tradeData:";
+
+    display_tradedata(pos.tradedata(), prepend + "\t");
+
+    switch (pos.positionstatus())
+    {
+        case POSITION_STATUS_OPEN:
+            hft2ctrader_log(DEBUG) << prepend << "positionStatus: POSITION_STATUS_OPEN";
+            break;
+        case POSITION_STATUS_CLOSED:
+            hft2ctrader_log(DEBUG) << prepend << "positionStatus: POSITION_STATUS_CLOSED";
+            break;
+        case POSITION_STATUS_CREATED: // Empty position is created for pending order.
+            hft2ctrader_log(DEBUG) << prepend << "positionStatus: POSITION_STATUS_CREATED";
+            break;
+        case POSITION_STATUS_ERROR:
+            hft2ctrader_log(DEBUG) << prepend << "positionStatus: POSITION_STATUS_ERROR";
+            break;
+    }
+
+    hft2ctrader_log(DEBUG) << prepend << "swap: " << pos.swap();
+
+    if (pos.has_price())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "price: " << pos.price();
+    }
+
+    if (pos.has_stoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "stopLoss: " << pos.stoploss();
+    }
+
+    if (pos.has_takeprofit())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "takeProfit: " << pos.takeprofit();
+    }
+
+    if (pos.has_utclastupdatetimestamp())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "utcLastUpdateTimestamp: "
+                               << pos.utclastupdatetimestamp();
+    }
+
+    if (pos.has_commission())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "commission: " << pos.commission();
+    }
+
+    if (pos.has_marginrate())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "marginRate: " << pos.marginrate();
+    }
+
+    if (pos.has_mirroringcommission())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "mirroringCommission: "
+                               << pos.mirroringcommission();
+    }
+
+    if (pos.has_guaranteedstoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "guaranteedStopLoss: "
+                               << (pos.guaranteedstoploss() ? "yes" : "no");
+    }
+
+    if (pos.has_usedmargin())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "usedMargin: " << pos.usedmargin();
+    }
+
+    if (pos.has_stoplosstriggermethod())
+    {
+        switch (pos.stoplosstriggermethod())
+        {
+            case TRADE:
+                // Stop Order: buy is triggered by ask, sell by bid;
+                // Stop Loss Order: for buy position is triggered
+                // by bid and for sell position by ask.
+
+                hft2ctrader_log(DEBUG) << prepend
+                                       << "stopLossTriggerMethod: TRADE";
+
+                break;
+            case OPPOSITE:
+                // Stop Order: buy is triggered by bid, sell by ask;
+                // Stop Loss Order: for buy position is triggered
+                // by ask and for sell position by bid.
+
+                hft2ctrader_log(DEBUG) << prepend
+                                       << "stopLossTriggerMethod: OPPOSITE";
+
+                break;
+            case DOUBLE_TRADE:
+                // The same as TRADE, but trigger is checked
+                // after the second consecutive tick.
+
+                hft2ctrader_log(DEBUG) << prepend
+                                       << "stopLossTriggerMethod: DOUBLE_TRADE";
+
+                break;
+            case DOUBLE_OPPOSITE:
+                // The same as OPPOSITE, but trigger is checked
+                // after the second consecutive tick.
+
+                hft2ctrader_log(DEBUG) << prepend
+                                       << "stopLossTriggerMethod: DOUBLE_OPPOSITE";
+
+                break;
+        }
+    }
+
+    if (pos.has_moneydigits())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "moneyDigits: " << pos.moneydigits();
+    }
+
+    if (pos.has_trailingstoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "trailingStopLoss: "
+                               << pos.trailingstoploss();
+    }
+}
+
+void display_tradedata(const ProtoOATradeData &tradedata, const std::string &prepend)
+{
+/*
+   Field               Type              Label       Description
+------------------------------------------------------------------------
+symbolid	          int64             required   The unique identifier of the symbol in specific server
+                                                   environment within cTrader platform. Different brokers
+                                                   might have different IDs.
+                                                   ---
+volume	              int64             required   Volume in cents.
+                                                   ---
+tradeside	          ProtoOATradeSide  required   Buy, Sell.
+                                                   ---
+opentimestamp         int64             optional   Time when position was opened or order was created.
+                                                   ---
+label                 string            optional   Text label specified during order request.
+                                                   ---
+guaranteedstoploss	  bool              optional   If TRUE then position/order stop loss is guaranteedStopLoss.
+                                                   ---
+comment               string            optional   User-specified comment.
+
+*/
+    hft2ctrader_log(DEBUG) << prepend << "symbolId: " << tradedata.symbolid();
+    hft2ctrader_log(DEBUG) << prepend << "volume: " << tradedata.volume();
+
+    switch (tradedata.tradeside())
+    {
+        case BUY:
+            hft2ctrader_log(DEBUG) << prepend << "tradeSide: BUY";
+            break;
+        case SELL:
+            hft2ctrader_log(DEBUG) << prepend << "tradeSide: SELL";
+            break;
+    }
+
+    if (tradedata.has_opentimestamp())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "openTimestamp: "
+                               << tradedata.opentimestamp();
+    }
+
+    if (tradedata.has_label())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "label: " << tradedata.label();
+    }
+
+    if (tradedata.has_guaranteedstoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "guaranteedStopLoss: "
+                               << (tradedata.guaranteedstoploss() ? "YES" : "NO");
+    }
+
+    if (tradedata.has_comment())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "comment: ‘"
+                               << tradedata.comment() << "’";
+    }
+}
+
+void display_protooaorder(const ProtoOAOrder &order, const std::string &prepend)
+{
+/*
+--------------------------------------------------------------------------------------
+orderid                int64                        required    The unique ID of the order. Note: trader might have
+                                                                two orders with the same id if orders are taken from
+                                                                accounts from different brokers.
+                                                                ---
+tradedata              ProtoOATradeData             required    Detailed trader data.
+                                                                ---
+orderType              ProtoOAOrderType             required    Order type.
+                                                                ---
+orderStatus            ProtoOAOrderStatus           required    Order status.
+                                                                ---
+expirationTimestamp    int64                        optional    If the order has time in force GTD then expiration is specified.
+                                                                ---
+executionPrice         double                       optional    Price at which an order was executed. For order with FILLED status.
+                                                                ---
+executedVolume         int64                        optional    Part of the volume that was filled.
+                                                                ---
+utcLastUpdateTimestamp int64                        optional    Timestamp of the last update of the order.
+                                                                ---
+baseSlippagePrice      double                       optional    Used for Market Range order with combination of slippageInPoints
+                                                                to specify price range were order can be executed.
+                                                                ---
+slippageInPoints       int64                        optional    Used for Market Range and STOP_LIMIT orders to to specify price
+                                                                range were order can be executed.
+                                                                ---
+closingOrder           bool                         optional    If TRUE then the order is closing part of whole position.
+                                                                Must have specified positionId.
+                                                                ---
+limitPrice             double                       optional    Valid only for LIMIT orders.
+                                                                ---
+stopPrice              double                       optional    Valid only for STOP and STOP_LIMIT orders.
+                                                                ---
+stopLoss               double                       optional    Absolute stopLoss price.
+                                                                ---
+takeProfit             double                       optional    Absolute takeProfit price.
+                                                                ---
+clientOrderId          string                       optional    Optional ClientOrderId. Max Length = 50 chars.
+                                                                ---
+timeInForce            ProtoOATimeInForce           optional    Order's time in force. Depends on order type.
+                                                                Default: IMMEDIATE_OR_CANCEL
+                                                                ---
+positionId             int64                        optional    ID of the position linked to the order (e.g. closing order,
+                                                                order that increase volume of a specific position, etc.).
+                                                                ---
+relativeStopLoss       int64                        optional    Relative stopLoss that can be specified instead of absolute
+                                                                as one. Specified in 1/100_000 of unit of a price.
+                                                                For BUY stopLoss = entryPrice - relativeStopLoss,
+                                                                for SELL stopLoss = entryPrice + relativeStopLoss.
+                                                                ---
+relativeTakeProfit     int64                        optional    Relative takeProfit that can be specified instead of absolute one.
+                                                                Specified in 1/100_000 of unit of a price.
+                                                                ForBUY takeProfit = entryPrice + relativeTakeProfit,
+                                                                for SELL takeProfit = entryPrice - relativeTakeProfit.
+                                                                ---
+isStopOut              bool                         optional    If TRUE then order was stopped out from server side.
+                                                                ---
+trailingStopLoss       bool                         optional    If TRUE then order is trailingStopLoss. Valid for
+                                                                STOP_LOSS_TAKE_PROFIT order.
+                                                                --- 
+stopTriggerMethod      ProtoOAOrderTriggerMethod    optional    Trigger method for the order. Valid only for STOP
+                                                                and STOP_LIMIT orders. Default: TRADE
+*/
+
+    hft2ctrader_log(DEBUG) << prepend << "orderId: " << order.orderid();
+
+    hft2ctrader_log(DEBUG) << prepend << "tradeData:";
+    display_tradedata(order.tradedata(), prepend + "\t");
+
+    switch (order.ordertype())
+    {
+        case MARKET:
+            hft2ctrader_log(DEBUG) << prepend << "orderType: MARKET";
+            break;
+
+        case LIMIT:
+            hft2ctrader_log(DEBUG) << prepend << "orderType: LIMIT";
+            break;
+
+        case STOP:
+            hft2ctrader_log(DEBUG) << prepend << "orderType: STOP";
+            break;
+
+        case STOP_LOSS_TAKE_PROFIT:
+            hft2ctrader_log(DEBUG) << prepend << "orderType: STOP_LOSS_TAKE_PROFIT";
+            break;
+
+        case MARKET_RANGE:
+            hft2ctrader_log(DEBUG) << prepend << "orderType: MARKET_RANGE";
+            break;
+
+        case STOP_LIMIT:
+            hft2ctrader_log(DEBUG) << prepend << "orderType: STOP_LIMIT";
+            break;
+    }
+
+    switch (order.orderstatus())
+    {
+        case ORDER_STATUS_ACCEPTED:
+	        // Order request validated and accepted for execution.
+            hft2ctrader_log(DEBUG) << prepend << "orderStatus: ORDER_STATUS_ACCEPTED";
+            break;
+
+        case ORDER_STATUS_FILLED:
+            // Order is fully filled.
+            hft2ctrader_log(DEBUG) << prepend << "orderStatus: ORDER_STATUS_FILLED";
+            break;
+
+        case ORDER_STATUS_REJECTED:
+            // Order is rejected due to validation.
+            hft2ctrader_log(DEBUG) << prepend << "orderStatus: ORDER_STATUS_REJECTED";
+            break;
+
+        case ORDER_STATUS_EXPIRED:
+            // Order expired. Might be valid for orders
+            // with partially filled volume that
+            // were expired on LP.
+            hft2ctrader_log(DEBUG) << prepend << "orderStatus: ORDER_STATUS_EXPIRED";
+            break;
+
+        case ORDER_STATUS_CANCELLED:
+            // Order is cancelled. Might be valid for
+            // orders with partially filled volume that
+            // were cancelled by LP.
+            hft2ctrader_log(DEBUG) << prepend << "orderStatus: ORDER_STATUS_CANCELLED";
+            break;
+    }
+
+    if (order.has_expirationtimestamp())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "expirationTimestamp: " << order.expirationtimestamp();
+    }
+
+    if (order.has_executionprice())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "executionPrice: " << order.executionprice();
+    }
+
+    if (order.has_executedvolume())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "executedVolume: " << order.executedvolume();
+    }
+
+    if (order.has_utclastupdatetimestamp())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "utcLastUpdateTimestamp: " << order.utclastupdatetimestamp();
+    }
+
+    if (order.has_baseslippageprice())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "baseSlippagePrice: " << order.baseslippageprice();
+    }
+
+    if (order.has_slippageinpoints())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "slippageInPoints: " << order.slippageinpoints();
+    }
+
+    if (order.has_closingorder())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "closingOrder: " << (order.closingorder() ? "YES" : "NO");
+    }
+
+    if (order.has_limitprice())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "limitPrice: " << order.limitprice();
+    }
+
+    if (order.has_stopprice())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "stopPrice: " << order.stopprice();
+    }
+
+    if (order.has_stoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "stopLoss: " << order.stoploss();
+    }
+
+    if (order.has_takeprofit())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "takeProfit: " << order.takeprofit();
+    }
+
+    if (order.has_clientorderid())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "clientOrderId: ‘" << order.clientorderid() << "’";
+    }
+
+    if (order.has_timeinforce())
+    {
+        switch (order.timeinforce())
+        {
+            case GOOD_TILL_DATE:
+                hft2ctrader_log(DEBUG) << prepend << "timeInForce: GOOD_TILL_DATE";
+                break;
+
+            case GOOD_TILL_CANCEL:
+                hft2ctrader_log(DEBUG) << prepend << "timeInForce: GOOD_TILL_CANCEL";
+                break;
+
+            case IMMEDIATE_OR_CANCEL:
+                hft2ctrader_log(DEBUG) << prepend << "timeInForce: IMMEDIATE_OR_CANCEL";
+                break;
+
+            case FILL_OR_KILL:
+                hft2ctrader_log(DEBUG) << prepend << "timeInForce: FILL_OR_KILL";
+                break;
+
+            case MARKET_ON_OPEN:
+                hft2ctrader_log(DEBUG) << prepend << "timeInForce: MARKET_ON_OPEN";
+                break;
+        }
+    }
+
+    if (order.has_positionid())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "positionId: " << order.positionid();
+    }
+
+    if (order.has_relativestoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "relativeStopLoss: " << order.relativestoploss();
+    }
+
+    if (order.has_relativetakeprofit())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "relativeTakeProfit: " << order.relativetakeprofit();
+    }
+
+    if (order.has_isstopout())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "isStopOut: " << (order.isstopout() ? "YES" : "NO");
+    }
+
+    if (order.has_trailingstoploss())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "trailingStopLoss: " << (order.trailingstoploss() ? "YES" : "NO");
+    }
+
+    if (order.has_stoptriggermethod())
+    {
+        switch (order.stoptriggermethod())
+        {
+            case TRADE:
+                // Stop Order: buy is triggered by ask, sell by bid;
+                // Stop Loss Order: for buy position is triggered by bid and for sell position by ask.
+
+                hft2ctrader_log(DEBUG) << prepend << "stopTriggerMethod: TRADE";
+
+                break;
+
+            case OPPOSITE:
+                // Stop Order: buy is triggered by bid, sell by ask;
+                // Stop Loss Order: for buy position is triggered by ask and for sell position by bid.
+
+                hft2ctrader_log(DEBUG) << prepend << "stopTriggerMethod: OPPOSITE";
+
+                break;
+
+            case DOUBLE_TRADE:
+                // The same as TRADE, but trigger is checked after the second consecutive tick.
+
+                hft2ctrader_log(DEBUG) << prepend << "stopTriggerMethod: DOUBLE_TRADE";
+
+                break;
+
+            case DOUBLE_OPPOSITE:
+                // The same as OPPOSITE, but trigger is checked after the second consecutive tick.
+
+                hft2ctrader_log(DEBUG) << prepend << "stopTriggerMethod: DOUBLE_OPPOSITE";
+
+                break;
+        }
+    }
+}
+
+void display_protooadeal(const ProtoOADeal &deal, const std::string &prepend)
+{
+/*
+   Field                   Type                           Label        Description
+--------------------------------------------------------------------------------------------------
+dealId                     int64                         required    The unique ID of the execution deal.
+                                                                     ---
+orderId                    int64                         required    Source order of the deal.
+                                                                     ---
+positionId                 int64                         required    Source position of the deal.
+                                                                     ---
+volume                     int64                         required    Volume sent for execution, in cents.
+                                                                     ---
+filledVolume               int64                         required    Filled volume, in cents.
+                                                                     ---
+symbolId                   int64                         required    The unique identifier of the symbol in specific server
+                                                                     environment within cTrader platform. Different servers
+                                                                     have different IDs.
+                                                                     ---
+createTimestamp            int64                         required    Time when the deal was sent for execution.
+                                                                     ---
+executionTimestamp         int64                         required    Time when the deal was executed.
+                                                                     ---
+utcLastUpdateTimestamp     int64                         optional    Timestamp when the deal was created, executed or rejected.
+                                                                     ---
+executionPrice             double                        optional    Execution price.
+                                                                     ---
+tradeSide                  ProtoOATradeSide              required    Buy/Sell.
+                                                                     ---
+dealStatus                 ProtoOADealStatus             required    Status of the deal.
+                                                                     ---
+marginRate                 double	                     optional    Rate for used margin computation. Represented as Base/Deposit.
+                                                                     ---
+commission                 int64	                     optional    Amount of trading commission associated with the deal.
+                                                                     ---
+baseToUsdConversionRate    double	                     optional    Base to USD conversion rate on the time of deal execution.
+                                                                     ---
+closePositionDetail        ProtoOAClosePositionDetail    optional    Closing position detail. Valid only for closing deal.
+                                                                     ---
+moneyDigits                uint32	                     optional    Specifies the exponent of the monetary values. E.g. moneyDigits = 8
+                                                                     must be interpret as business value multiplied by 10^8, then real
+                                                                     balance would be 10053099944 / 10^8 = 100.53099944. Affects commission.
+*/
+    hft2ctrader_log(DEBUG) << prepend << "dealId: " << deal.dealid();
+    hft2ctrader_log(DEBUG) << prepend << "orderId: " << deal.orderid();
+    hft2ctrader_log(DEBUG) << prepend << "volume: " << deal.volume();
+    hft2ctrader_log(DEBUG) << prepend << "filledVolume: " << deal.filledvolume();
+    hft2ctrader_log(DEBUG) << prepend << "symbolId: " << deal.symbolid();
+    hft2ctrader_log(DEBUG) << prepend << "createTimestamp: " << deal.createtimestamp();
+    hft2ctrader_log(DEBUG) << prepend << "executionTimestamp: " << deal.executiontimestamp();
+
+    if (deal.has_utclastupdatetimestamp())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "utcLastUpdateTimestamp: " << deal.utclastupdatetimestamp();
+    }
+
+    if (deal.has_executionprice())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "executionPrice: " << deal.executionprice();
+    }
+
+    switch (deal.tradeside())
+    {
+        case BUY:
+            hft2ctrader_log(DEBUG) << prepend << "tradeSide: BUY";
+            break;
+
+        case SELL:
+            hft2ctrader_log(DEBUG) << prepend << "tradeSide: SELL";
+            break;
+    }
+
+    switch (deal.dealstatus())
+    {
+        case FILLED:
+            // Deal filled.
+            hft2ctrader_log(DEBUG) << prepend << "dealStatus: FILLED";
+            break;
+
+        case PARTIALLY_FILLED:
+            // Deal is partially filled.
+            hft2ctrader_log(DEBUG) << prepend << "dealStatus: PARTIALLY_FILLED";
+            break;
+
+        case REJECTED:
+            // Deal is correct but was rejected by liquidity provider (e.g. no liquidity).
+            hft2ctrader_log(DEBUG) << prepend << "dealStatus: REJECTED";
+            break;
+
+        case INTERNALLY_REJECTED:
+            // Deal rejected by server (e.g. no price quotes).
+            hft2ctrader_log(DEBUG) << prepend << "dealStatus: INTERNALLY_REJECTED";
+            break;
+
+        case ERROR:
+            // Deal is rejected by LP due to error (e.g. symbol is unknown).
+            hft2ctrader_log(DEBUG) << prepend << "dealStatus: ERROR";
+            break;
+
+        case MISSED:
+            // Liquidity provider did not sent response on the deal during specified execution time period.
+            hft2ctrader_log(DEBUG) << prepend << "dealStatus: MISSED";
+            break;
+    }
+
+    if (deal.has_marginrate())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "marginRate: " << deal.marginrate();
+    }
+
+    if (deal.has_commission())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "commission: " << deal.commission();
+    }
+
+    if (deal.has_basetousdconversionrate())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "baseToUsdConversionRate: " << deal.basetousdconversionrate();
+    }
+
+    if (deal.has_closepositiondetail())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "closePositionDetail:";
+
+        display_closepositiondetail(deal.closepositiondetail(), prepend + "\t");
+    }
+
+    if (deal.has_moneydigits())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "moneyDigits: " << deal.moneydigits();
+    }
+}
+
+void display_closepositiondetail(const ProtoOAClosePositionDetail &cpd, const std::string &prepend)
+{
+/*
+Field                            Type      Label         Description
+------------------------------------------------------------------------------
+entryPrice                      double    required    Position price at the moment of filling the closing order.
+                                                      ---
+grossProfit                     int64     required    Amount of realized gross profit after closing deal execution.
+                                                      ---
+swap                            int64     required    Amount of realized swap related to closed volume.
+                                                      ---
+commission                      int64     required    Amount of realized commission related to closed volume.
+                                                      ---
+balance                         int64     required    Account balance after closing deal execution.
+                                                      ---
+quoteToDepositConversionRate    double    optional    Quote/Deposit currency conversion rate on the time
+                                                      of closing deal execution.
+                                                      ---
+closedVolume                    int64     optional    Closed volume in cents.
+                                                      ---
+balanceVersion                  int64     optional    Balance version of the account related to closing deal operation.
+                                                      ---
+moneyDigits                     uint32    optional    Specifies the exponent of the monetary values. E.g. moneyDigits = 8
+                                                      must be interpret as business value multiplied by 10^8, then real
+                                                      balance would be 10053099944 / 10^8 = 100.53099944. Affects
+                                                      grossProfit, swap, commission, balance, pnlConversionFee.
+                                                      ---
+pnlConversionFee                int64     optional    Fee for conversion applied to the Deal in account's ccy when trader
+                                                      symbol's quote asset id <> ProtoOATrader.depositAssetId.
+*/
+
+    hft2ctrader_log(DEBUG) << prepend << "entryPrice: " << cpd.entryprice();
+    hft2ctrader_log(DEBUG) << prepend << "grossProfit: " << cpd.grossprofit();
+    hft2ctrader_log(DEBUG) << prepend << "swap: " << cpd.swap();
+    hft2ctrader_log(DEBUG) << prepend << "commission: " << cpd.commission();
+    hft2ctrader_log(DEBUG) << prepend << "balance: " << cpd.balance();
+
+    if (cpd.has_quotetodepositconversionrate())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "quoteToDepositConversionRate: "
+                               << cpd.quotetodepositconversionrate();
+    }
+
+    if (cpd.has_closedvolume())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "closedVolume: " << cpd.closedvolume();
+    }
+
+    if (cpd.has_balanceversion())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "balanceVersion: " << cpd.balanceversion();
+    }
+
+    if (cpd.has_moneydigits())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "moneyDigits: " << cpd.moneydigits();
+    }
+
+    if (cpd.has_pnlconversionfee())
+    {
+        hft2ctrader_log(DEBUG) << prepend << "pnlConversionFee: " << cpd.pnlconversionfee();
+    }
+}
+
+#endif /* ORDER_EXECUTION_DEBUG */
 
 } // namespace

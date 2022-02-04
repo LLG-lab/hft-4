@@ -18,6 +18,7 @@
 #define __CTRADER_SESSION_HPP__
 
 #include <map>
+#include <list>
 #include <boost/msm/front/state_machine_def.hpp>
 
 #include <ctrader_api.hpp>
@@ -73,6 +74,7 @@ public:
     struct account_authorization : public msm::front::state<> {};
     struct account_informations : public msm::front::state<> {};
     struct instrument_informations : public msm::front::state<> {};
+    struct position_informations : public msm::front::state<> {};
     struct operational : public msm::front::state<> {};
 
     typedef wait_for_connect initial_state;
@@ -88,8 +90,10 @@ public:
     bool is_account_authorized(data_event const &event);
     void start_acquire_instrument_informations(data_event const &event);
     bool has_account_informations(data_event const &event);
-    void initialize_bridge(data_event const &event); // ma wywołać on_init
+    void start_acquire_position_informations(data_event const &event);
     bool has_instrument_informations(data_event const &event);
+    void initialize_bridge(data_event const &event); // ma wywołać on_init
+    bool has_position_informations(data_event const &event);
     void dispatch_event(data_event const &event);
 
     typedef ctrader_session cs; // Makes transition table cleaner.
@@ -110,8 +114,11 @@ public:
         row < account_informations    , cs::data_event           , instrument_informations , &cs::start_acquire_instrument_informations , &cs::has_account_informations    >,
        _row < account_informations    , cs::error_event          , wait_for_connect                                                                                        >,
         //  +-------------------------+--------------------------+-------------------------+--------------------------------------------+----------------------------------+
-        row < instrument_informations , cs::data_event           , operational             , &cs::initialize_bridge                     , &cs::has_instrument_informations >,
+        row < instrument_informations , cs::data_event           , position_informations   , &cs::start_acquire_position_informations   , &cs::has_instrument_informations >,
        _row < instrument_informations , cs::error_event          , wait_for_connect                                                                                        >,
+        //  +-------------------------+--------------------------+-------------------------+--------------------------------------------+----------------------------------+
+        row < position_informations   , cs::data_event           , operational             , &cs::initialize_bridge                     , &cs::has_position_informations   >,
+       _row < position_informations   , cs::error_event          , wait_for_connect                                                                                        >,
         //  +-------------------------+--------------------------+-------------------------+--------------------------------------------+----------------------------------+
       a_row < operational             , cs::data_event           , operational             , &cs::dispatch_event                                                           >,
        _row < operational             , cs::error_event          , wait_for_connect                                                                                        >
@@ -121,32 +128,17 @@ public:
 protected:
 
     //
-    // Auxiliary types.
-    //
-
-    typedef std::vector<std::string> instruments_container;
-
-    typedef struct _tick_type
-    {
-        _tick_type(void)
-            : instrument { "" }, ask {-1.0}, bid {-1.0}, timestamp { 0 }
-        {}
-
-        std::string instrument;
-        double ask;
-        double bid;
-        int timestamp;
-
-    } tick_type;
-
-    //
     // Utility routine for market_session.
     //
 
     double get_balance(void) const { return account_balance_; }
+    const positions_container &get_opened_positions(void) const { return positions_; }
+    std::string get_instrument_ticker(int instrument_id) const;
+    double get_free_margin(void); //const;
 
-    void subscribe_instruments_ex(const instruments_container &instruments);
-    void create_market_order_ex(const std::string &position_id, const std::string &instrument, position_type pt, int volume);
+    bool subscribe_instruments_ex(const instruments_container &instruments);
+    bool create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume);
+    bool close_position_ex(const std::string &identifier);
 
     //
     // Things to be implemented in market_session.
@@ -154,9 +146,19 @@ protected:
 
     virtual void on_init(void) = 0;
     virtual void on_tick(const tick_type &tick) = 0;
-    virtual void on_order_execution_event(const ProtoOAExecutionEvent &event) = 0;
+    virtual void on_position_open(const position_info &position) = 0;
+    virtual void on_position_open_error(const order_error_info &order_error) = 0;
+    virtual void on_position_close(const closed_position_info &closed_position) = 0;
+    virtual void on_position_close_error(const order_error_info &order_error) = 0;
 
 private:
+
+    void arrange_position(const ProtoOAPosition &pos, bool historical);
+
+    void handle_order_fill(const ProtoOAExecutionEvent &evt);
+    void handle_order_reject(const ProtoOAExecutionEvent &evt);
+
+    positions_container positions_;
 
     const hft2ctrader_bridge_config &config_;
 
@@ -167,6 +169,7 @@ private:
     double account_balance_;
 
     unsigned long last_heartbeat_;
+    unsigned long registration_timestamp_;
 };
 
 #endif /* __CTRADER_SESSION_HPP__ */

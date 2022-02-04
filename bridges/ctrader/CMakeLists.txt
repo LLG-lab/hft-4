@@ -42,10 +42,13 @@ configure_file(
 list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/hft2ctrader-config.h
      ${PROJECT_SOURCE_DIR}/bridge/include/aux_functions.hpp
+     ${PROJECT_SOURCE_DIR}/bridge/include/market_types.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/hft2ctrader_bridge_config.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_ssl_connection.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_api.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_session.hpp
+     ${PROJECT_SOURCE_DIR}/bridge/include/hft_api.hpp
+     ${PROJECT_SOURCE_DIR}/bridge/include/hft_connection.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/market_session.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/bridge.hpp
 )
@@ -62,7 +65,9 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/bridge/hft2ctrader_bridge_config.cpp
      ${PROJECT_SOURCE_DIR}/bridge/ctrader_ssl_connection.cpp
      ${PROJECT_SOURCE_DIR}/bridge/ctrader_api.cpp
+     ${PROJECT_SOURCE_DIR}/bridge/hft_api.cpp
      ${PROJECT_SOURCE_DIR}/bridge/ctrader_session.cpp
+     ${PROJECT_SOURCE_DIR}/bridge/hft_connection.cpp
      ${PROJECT_SOURCE_DIR}/bridge/market_session.cpp
      ${PROJECT_SOURCE_DIR}/../../3rd-party/easylogging++/easylogging++.cc
 )

@@ -25,6 +25,10 @@ unsigned long get_current_timestamp(void);
 
 unsigned long ptime2timestamp(const boost::posix_time::ptime &t);
 
+std::string timestamp2string(unsigned long timestamp);
+
+std::string hexdump(const std::string &data);
+
 } // namespace aux
 
 #endif /* __AUX_FUNCTIONS_HPP__ */
