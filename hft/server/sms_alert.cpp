@@ -14,36 +14,56 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __HFT_SERVER_CONFIG__
-#define __HFT_SERVER_CONFIG__
+#include <memory>
 
 #include <sms_alert.hpp>
+#include <sms_messenger.hpp>
 
-class hft_server_config
+#ifdef HFT_TEST_SMS_CONFIG
+#include <iostream>
+#endif
+
+namespace {
+
+std::unique_ptr<sms_messenger> messenger;
+
+}
+
+namespace sms {
+
+void initialize_sms_alert(const config &cfg)
 {
-public:
+    #ifdef HFT_TEST_SMS_CONFIG
+    std::cout << "SMS configuration:\n";
+    std::cout << " enabled:  " << ( cfg.enabled ? "yes" : "no") << "\n";
+    std::cout << " sandbox:  " << ( cfg.sandbox ? "yes" : "no") << "\n";
+    std::cout << " login:    " << cfg.login << "\n";
+    std::cout << " password: " << cfg.password << "\n";
+    std::cout << " recipients:\n";
 
-    hft_server_config(const std::string &xml_file_name = "/var/log/hft/server.log");
-    ~hft_server_config(void) = default;
-
-    std::string get_logging_config(void) const;
-    const sms::config &get_sms_alert_config(void) const { return sms_config_; }
-
-private:
-
-    enum logging_severity
+    for (auto &x : cfg.recipients)
     {
-        HFT_SEVERITY_FATAL   = 0,
-        HFT_SEVERITY_ERROR   = 1,
-        HFT_SEVERITY_WARNING = 2,
-        HFT_SEVERITY_INFO    = 3,
-        HFT_SEVERITY_TRACE   = 4,
-        HFT_SEVERITY_DEBUG   = 5
-    };
+        std::cout << "    " << x << "\n";
+    }
+    #endif /* HFT_TEST_SMS_CONFIG */
 
-    logging_severity log_severity_;
-    sms::config sms_config_;
-}; 
+    if (cfg.enabled && ! messenger)
+    {
+        messenger.reset(new sms_messenger(cfg));
+    }
+}
 
-#endif /* __HFT_SERVER_CONFIG__ */
+void alert(const std::string &message)
+{
+    if (messenger)
+    {
+        sms_messenger_data message_data;
 
+        message_data.process = "HFT";
+        message_data.sms_data = message;
+
+        messenger -> enqueue(message_data);
+    }
+}
+
+} // namespace sms

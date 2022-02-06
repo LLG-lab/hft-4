@@ -123,6 +123,17 @@ int hft_server_main(int argc, char *argv[])
 
     el::Logger *logger = el::Loggers::getLogger("server", true);
 
+    //
+    // Initial SMS critical alert messanger.
+    //
+
+    sms::initialize_sms_alert(hft_srv_cfg.get_sms_alert_config());
+
+    //
+    // Should the HFT server be demonized
+    // the old way - bypassing systemd.
+    //
+
     if (vm.count("daemon"))
     {
         hftOption(start_as_daemon) = true;
@@ -195,7 +206,7 @@ int hft_server_main(int argc, char *argv[])
         return 1;
     }
 
-    hft_log(INFO) << "*** Server terminated.";
+    hft_log(WARNING) << "*** Server terminated.";
 
     return 0;
 }

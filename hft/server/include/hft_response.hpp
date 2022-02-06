@@ -46,7 +46,13 @@ public:
         int qty_;
     };
 
-    response(void) {};
+    response(void)
+    {};
+
+    response(const std::string &instrument)
+        : instrument_ {instrument}
+    {}
+
     ~response(void) = default;
 
     //
@@ -68,12 +74,14 @@ public:
 
     bool is_error(void) const { return !error_message_.empty(); }
     std::string get_error_message(void) const { return error_message_; }
+    std::string get_instrument(void) const { return instrument_; }
     const std::list<open_position_info> &get_new_positions(void) const { return new_positions_; }
     const std::list<std::string> &get_close_positions(void) const { return close_positions_; }
 
 private:
 
     std::string error_message_;
+    std::string instrument_;
     std::list<open_position_info> new_positions_;
     std::list<std::string> close_positions_;
 };

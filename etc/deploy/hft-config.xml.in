@@ -11,6 +11,24 @@
 			DEBUG
 		-->
 		<logging severity="INFO"/>
+
+		<sms-alerts active="false" sandbox="false">
+			<!--
+			 Login and password for SMS gateway.
+			 You must have account in service
+			 gsmservice.pl
+			-->
+			<auth>
+				<login>YOURLOGIN</login>
+				<password>YOURPASSWORD</password>
+			</auth>
+
+			<!--
+			 Recipient is a phone number.
+			 Multiple recipiens are available.
+			-->
+			<recipient>000000000</recipient>
+		</sms-alerts>
 	</server>
 	<market-gateway-processes>
 		<process name="Dukascopy" active="false">

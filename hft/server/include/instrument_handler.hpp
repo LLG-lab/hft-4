@@ -91,6 +91,12 @@ protected:
     static const boost::json::object &json_get_object_attribute(const boost::json::object &obj, const std::string &attr_name);
 
     //
+    // Extra.
+    //
+
+    void sms_alert(const std::string &message);
+
+    //
     //  Handler state keeper.
     //
 

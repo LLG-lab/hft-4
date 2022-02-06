@@ -53,17 +53,29 @@ public:
 
 private:
 
+    enum class connection_stage_type
+    {
+        IDLE,
+        CONNECTING,
+        CONNECTED
+    };
+
     void handshake(void);
     void async_read_raw_message(void);
     void async_read_msg_chunk(void);
     void transmit(void);
 
+    void try_reconnect_after_a_while(void);
+
     std::string ctrader_port_;
     std::string ctrader_host_;
 
+    int  connection_attempts_;
+
     boost::asio::ssl::context ssl_ctx_;
     boost::asio::ssl::stream<boost::asio::ip::tcp::socket> socket_;
-    boost::asio::ip::tcp::resolver::results_type endpoint_;
+    boost::asio::steady_timer reconnect_timer_;
+    boost::asio::io_context &ioctx_;
 
     std::function<void(const boost::system::error_code &)> on_error;
     std::function<void(const std::vector<char> &)> on_data;
@@ -74,6 +86,8 @@ private:
     int message_total_read_;
     std::vector<char> message_buf_;
     std::list<std::vector<char>> send_buffers_;
+
+    connection_stage_type connection_stage_;
 };
 
 #endif /* __CTRADER_SSL_CONNECTION_HPP__ */

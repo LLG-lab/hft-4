@@ -48,6 +48,7 @@ std::string response::serialize(void) const
 
     object obj, cp_obj, op_obj;
     obj["status"] = "advice";
+    obj["instrument"] = instrument_;
 
     array arr;
 
@@ -94,6 +95,7 @@ void response::unserialize(const std::string &payload)
     using namespace boost::json;
 
     error_message_.clear();
+    instrument_.clear();
     new_positions_.clear();
     close_positions_.clear();
 
@@ -158,6 +160,20 @@ void response::unserialize(const std::string &payload)
     }
     else if (status == "advice")
     {
+        if (! obj.contains("instrument"))
+        {
+            throw response::violation_error("Missing instrument");
+        }
+
+        value const &instrument_v = obj.at("instrument");
+
+        if (instrument_v.kind() != kind::string)
+        {
+            throw response::violation_error("Invalid instrument type");
+        }
+
+        instrument_ = instrument_v.get_string().c_str();
+
         if (! obj.contains("operations"))
         {
             throw response::violation_error("Missing operations");

@@ -162,6 +162,7 @@ protected:
     virtual void on_position_open_error(const order_error_info &order_error) = 0;
     virtual void on_position_close(const closed_position_info &closed_position) = 0;
     virtual void on_position_close_error(const order_error_info &order_error) = 0;
+    virtual void on_hft_advice(const hft_api::hft_response &adv) = 0;
 
 private:
 
@@ -169,6 +170,8 @@ private:
 
     void handle_order_fill(const ProtoOAExecutionEvent &evt);
     void handle_order_reject(const ProtoOAExecutionEvent &evt);
+
+    void handle_oa_trader(const ProtoOATrader &trader);
 
     positions_container positions_;
 

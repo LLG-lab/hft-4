@@ -115,3 +115,8 @@ void proxy_session::on_position_close_error(const order_error_info &order_error)
 
     // TODO: Not implemented.
 }
+
+void proxy_session::on_hft_advice(const hft_api::hft_response &adv)
+{
+    // TODO: Not implemented.
+}

@@ -164,43 +164,7 @@ bool proxy_core::has_account_informations(ctrader_data_event const &event)
             ProtoOATraderRes res;
             res.ParseFromString(payload);
 
-            hft2ctrader_log(INFO) << "Account information status:";
-
-            if (res.trader().has_balance())
-            {
-                account_balance_ = (double)(res.trader().balance()) / 100.0;
-
-                hft2ctrader_log(INFO) << "    Balance: "
-                                      << account_balance_;
-            }
-
-            if (res.trader().has_balanceversion())
-            {
-                hft2ctrader_log(INFO) << "    Balance version: "
-                                      << res.trader().balanceversion();
-            }
-
-            if (res.trader().has_leverageincents())
-            {
-                int leverage = res.trader().leverageincents() / 100;
-
-                hft2ctrader_log(INFO) << "    Leverage: 1:"
-                                      << leverage;
-            }
-
-            if (res.trader().has_brokername())
-            {
-                hft2ctrader_log(INFO) << "    Broker: "
-                                      << res.trader().brokername();
-            }
-
-            if (res.trader().has_registrationtimestamp())
-            {
-                hft2ctrader_log(INFO) << "    Account opened: "
-                                      << aux::timestamp2string(res.trader().registrationtimestamp());
-
-                registration_timestamp_ = res.trader().registrationtimestamp();
-            }
+            handle_oa_trader(res.trader());
 
             return true;
         }
@@ -348,6 +312,36 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
 
             break;
         }
+        case PROTO_OA_ACCOUNT_DISCONNECT_EVENT:
+        {
+            // FIXME: Do ogarnięcia.
+            hft2ctrader_log(ERROR) << "Received PROTO_OA_ACCOUNT_DISCONNECT_EVENT – "
+                                   << "established session for an account is dropped"
+                                   << " on the server side.";
+
+            break;
+        }
+        case PROTO_OA_CLIENT_DISCONNECT_EVENT:
+        {
+            ProtoOAClientDisconnectEvent evt;
+            evt.ParseFromString(payload);
+
+            if (evt.has_reason())
+            {
+                hft2ctrader_log(FATAL) << "Connection with the client "
+                                       << "application is cancelled by "
+                                       << "the server. Reason is ‘"
+                                       << evt.reason() << "’";
+            }
+            else
+            {
+                hft2ctrader_log(FATAL) << "Connection with the client "
+                                       << "application is cancelled by "
+                                       << "the server with no explanation.";
+            }
+
+            break;
+        }
         case PROTO_OA_SUBSCRIBE_SPOTS_RES:
         {
             hft2ctrader_log(INFO) << "Subscribe instruments SUCCESS.";
@@ -359,9 +353,7 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
             ProtoOATraderUpdatedEvent evt;
             evt.ParseFromString(payload);
 
-            account_balance_ = (double)(evt.trader().balance()) / 100.0;
-
-            hft2ctrader_log(INFO) << "Account balance: " << account_balance_;
+            handle_oa_trader(evt.trader());
 
             break;
         }
@@ -489,7 +481,16 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
 
 void proxy_core::dispatch_hft_data_event(hft_data_event const &event)
 {
-// FIXME: Not implemented.
+    try
+    {
+        hft_api::hft_response rsp {event.data_};
+
+        on_hft_advice(rsp);
+    }
+    catch (const std::exception &e)
+    {
+        hft2ctrader_log(ERROR) << "Response ERROR: ‘" << e.what() << "’";
+    }
 }
 
 //
@@ -915,6 +916,71 @@ void proxy_core::handle_order_reject(const ProtoOAExecutionEvent &evt)
                 }
             }
         }
+    }
+}
+
+void proxy_core::handle_oa_trader(const ProtoOATrader &trader)
+{
+    hft2ctrader_log(INFO) << "Account information status:";
+
+    int money_divisor = 1;
+
+    if (trader.has_moneydigits())
+    {
+        hft2ctrader_log(TRACE) << "moneyDigits: " << trader.moneydigits();
+
+        int md = trader.moneydigits();
+
+        while (md--) money_divisor *= 10;
+    }
+
+    if (trader.has_accounttype())
+    {
+        switch (trader.accounttype())
+        {
+            case HEDGED:
+                hft2ctrader_log(INFO) << "    Accoun type: HEDGED – Allows multiple positions on a trading account for a symbol.";
+                break;
+            case NETTED:
+                hft2ctrader_log(INFO) << "    Accoun type: NETTED – Only one position per symbol is allowed on a trading account.";
+                break;
+            case SPREAD_BETTING:
+                hft2ctrader_log(INFO) << "    Accoun type: SPREAD_BETTING – Spread betting type account.";
+                break;
+        }
+    }
+
+    if (trader.has_balance())
+    {
+        account_balance_ = (double)(trader.balance()) / money_divisor;
+
+        hft2ctrader_log(INFO) << "    Balance: " << account_balance_;
+    }
+
+    if (trader.has_balanceversion())
+    {
+        hft2ctrader_log(INFO) << "    Balance version: "
+                              << trader.balanceversion();
+    }
+
+    if (trader.has_leverageincents())
+    {
+        int leverage = trader.leverageincents() / 100;
+
+        hft2ctrader_log(INFO) << "    Leverage: 1:" << leverage;
+    }
+
+    if (trader.has_brokername())
+    {
+        hft2ctrader_log(INFO) << "    Broker: " << trader.brokername();
+    }
+
+    if (trader.has_registrationtimestamp())
+    {
+        hft2ctrader_log(INFO) << "    Account opened: "
+                              << aux::timestamp2string(trader.registrationtimestamp());
+
+        registration_timestamp_ = trader.registrationtimestamp();
     }
 }
 

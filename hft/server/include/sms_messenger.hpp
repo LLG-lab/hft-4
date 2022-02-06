@@ -14,36 +14,44 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __HFT_SERVER_CONFIG__
-#define __HFT_SERVER_CONFIG__
+#ifndef __SMS_MESSENGER_HPP__
+#define __SMS_MESSENGER_HPP__
+
+#include <thread_worker.hpp>
+#include <curlpp.hpp>
 
 #include <sms_alert.hpp>
 
-class hft_server_config
+typedef struct _sms_messenger_data
+{
+    std::string process;
+    std::string sms_data;
+
+} sms_messenger_data;
+
+class sms_messenger : public thread_worker<sms_messenger_data>
 {
 public:
 
-    hft_server_config(const std::string &xml_file_name = "/var/log/hft/server.log");
-    ~hft_server_config(void) = default;
+    sms_messenger(void) = delete;
 
-    std::string get_logging_config(void) const;
-    const sms::config &get_sms_alert_config(void) const { return sms_config_; }
+    sms_messenger(sms_messenger &) = delete;
+
+    sms_messenger(sms_messenger &&) = delete;
+
+    sms_messenger(const sms::config &config);
+
+    ~sms_messenger(void);
 
 private:
 
-    enum logging_severity
-    {
-        HFT_SEVERITY_FATAL   = 0,
-        HFT_SEVERITY_ERROR   = 1,
-        HFT_SEVERITY_WARNING = 2,
-        HFT_SEVERITY_INFO    = 3,
-        HFT_SEVERITY_TRACE   = 4,
-        HFT_SEVERITY_DEBUG   = 5
-    };
+    void work(const sms_messenger_data &data);
 
-    logging_severity log_severity_;
-    sms::config sms_config_;
-}; 
+    static std::string url_encode(const std::string &data);
 
-#endif /* __HFT_SERVER_CONFIG__ */
+    curlpp http_client_;
 
+    const sms::config config_;
+};
+
+#endif /* __SMS_MESSENGER_HPP__ */

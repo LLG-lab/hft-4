@@ -36,13 +36,7 @@ public:
 
     basic_tcp_server(boost::asio::io_context &ioctx, const std::string &endpoint, short port)
         : ioctx_(ioctx),
-          acceptor_(ioctx, tcp::endpoint(tcp::v4(), port)) /* FIXME: ogarnąć tworzenie acceptora na podstawie endpointa.
-
-Sprawdzić na przykład to:
-
-    boost::asio::ip::tcp::endpoint endpoint(
-    boost::asio::ip::address::from_string("127.0.0.1"), 12345);
- */
+          acceptor_(ioctx, tcp::endpoint(boost::asio::ip::address::from_string(endpoint), port))
     {
         //
         // Creates logger with id `TCP_IP_server'.

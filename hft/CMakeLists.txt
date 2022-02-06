@@ -67,7 +67,12 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/hft-config.h
      ${PROJECT_SOURCE_DIR}/server/include/custom_except.hpp
      ${PROJECT_SOURCE_DIR}/server/include/deallocator.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/synchronized_queue.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/thread_worker.hpp
      ${PROJECT_SOURCE_DIR}/server/include/utilities.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/curlpp.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/sms_alert.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/sms_messenger.hpp
      ${PROJECT_SOURCE_DIR}/server/include/daemon_process.hpp
      ${PROJECT_SOURCE_DIR}/server/include/marketplace_gateway_process.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_request.hpp
@@ -97,6 +102,9 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/draft_main.cpp
      ${PROJECT_SOURCE_DIR}/server/deallocator.cpp
      ${PROJECT_SOURCE_DIR}/server/utilities.cpp
+     ${PROJECT_SOURCE_DIR}/server/curlpp.cpp
+     ${PROJECT_SOURCE_DIR}/server/sms_alert.cpp
+     ${PROJECT_SOURCE_DIR}/server/sms_messenger.cpp
      ${PROJECT_SOURCE_DIR}/server/daemon_process.cpp
      ${PROJECT_SOURCE_DIR}/server/marketplace_gateway_process.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_server_config.cpp
@@ -151,6 +159,14 @@ set_target_properties(hft PROPERTIES COMPILE_FLAGS ${TEMP} )
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 #
+# Check for dependences: find cURL library (Required).
+#
+
+find_package(CURL REQUIRED)
+include_directories(${CURL_INCLUDE_DIRS})
+target_link_libraries(hft ${CURL_LIBRARIES})
+
+#
 # Check for dependences: pthread (Required).
 #
 
@@ -182,4 +198,3 @@ include_directories("${PROJECT_SOURCE_DIR}/dukascopy-emulator/include")
 include_directories("${PROJECT_SOURCE_DIR}/../3rd-party")
 include_directories("${PROJECT_SOURCE_DIR}/../3rd-party/boost")
 include_directories("${PROJECT_SOURCE_DIR}/../3rd-party/easylogging++")
-

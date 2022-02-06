@@ -27,8 +27,12 @@
 ctrader_ssl_connection::ctrader_ssl_connection(boost::asio::io_context& io_context, const hft2ctrader_bridge_config &cfg)
     : ctrader_port_ { "5035" },
       ctrader_host_ { "" },
+      connection_attempts_ {0},
       ssl_ctx_ { boost::asio::ssl::context::sslv23 },
-      socket_ {io_context, ssl_ctx_ }
+      socket_ {io_context, ssl_ctx_ },
+      reconnect_timer_ {io_context},
+      ioctx_ {io_context},
+      connection_stage_ { connection_stage_type::IDLE }
 {
     switch (cfg.get_account_type())
     {
@@ -42,21 +46,7 @@ ctrader_ssl_connection::ctrader_ssl_connection(boost::asio::io_context& io_conte
              throw std::logic_error("Illegal broker account type");
     }
 
-    boost::asio::ip::tcp::resolver resolver(io_context);
-    endpoint_ = resolver.resolve(ctrader_host_, ctrader_port_);
-
     el::Loggers::getLogger("ssl_connection", true);
-
-    socket_.set_verify_mode(boost::asio::ssl::verify_peer);
-    socket_.set_verify_callback([this](auto preverified, auto &ctx) {
-            // FIXME: Potem rozkminić jak to obsłużyć pożądnie.
-            char subject_name[256];
-            X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-            X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-            hft2ctrader_log(INFO) << "Verifying " << subject_name;
-
-			return true; //preverified;
-	});
 }
 
 ctrader_ssl_connection::~ctrader_ssl_connection(void)
@@ -92,19 +82,51 @@ void ctrader_ssl_connection::connect(void)
     }
 
     //
+    // Check connection stage.
+    //
+
+    switch (connection_stage_)
+    {
+        case connection_stage_type::CONNECTING:
+            return;
+        case connection_stage_type::CONNECTED:
+            hft2ctrader_log(WARNING) << "Server already connected";
+            return;
+        case connection_stage_type::IDLE:
+            connection_stage_ = connection_stage_type::CONNECTING;
+            break;
+    }
+
+    //
     // Start connection.
     //
 
+    boost::asio::ip::tcp::resolver resolver(ioctx_);
+    auto endpoint = resolver.resolve(ctrader_host_, ctrader_port_);
+
+    socket_.set_verify_mode(boost::asio::ssl::verify_peer);
+    socket_.set_verify_callback([this](auto preverified, auto &ctx) {
+            // FIXME: Potem rozkminić jak to obsłużyć pożądnie.
+            char subject_name[256];
+            X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+            X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+            hft2ctrader_log(INFO) << "Verifying " << subject_name;
+
+			return true; // Jeśli cert ok, ma zwrócić true.
+	});
+
     hft2ctrader_log(INFO) << "Starting async connection to the server "
-                          << (*endpoint_.begin()).host_name() << " ("
-                          << (*endpoint_.begin()).endpoint().address().to_string()
+                          << (*endpoint.begin()).host_name() << " ("
+                          << (*endpoint.begin()).endpoint().address().to_string()
                           << ")";
 
-    boost::asio::async_connect(socket_.lowest_layer(), endpoint_,
+    boost::asio::async_connect(socket_.lowest_layer(), endpoint,
         [this](const boost::system::error_code &error, const boost::asio::ip::tcp::endpoint &endpoint)
         {
             if (! error)
             {
+                connection_attempts_ = 0;
+
                 handshake();
             }
             else
@@ -114,11 +136,8 @@ void ctrader_ssl_connection::connect(void)
                                        << " failed ("
                                        << error.value() << "): "
                                        << error.message() << ".";
-                hft2ctrader_log(ERROR) << "Waiting 5 seconds and retry...";
 
-                usleep(5000000);
-
-                connect();
+                try_reconnect_after_a_while();
             }
         });
 }
@@ -126,6 +145,8 @@ void ctrader_ssl_connection::connect(void)
 void ctrader_ssl_connection::close(void)
 {
     boost::system::error_code ec;
+
+    reconnect_timer_.cancel();
 
     socket_.shutdown(ec);
 
@@ -146,6 +167,8 @@ void ctrader_ssl_connection::close(void)
     }
 
     hft2ctrader_log(INFO) << "Connection to cTrader closed.";
+
+    connection_stage_ = connection_stage_type::IDLE;
 }
 
 void ctrader_ssl_connection::send_data(const std::vector<char> &data)
@@ -173,6 +196,8 @@ void ctrader_ssl_connection::handshake(void)
         {
             if (! error)
             {
+                connection_stage_ = connection_stage_type::CONNECTED;
+
                 async_read_raw_message();
 
                 on_connected();
@@ -228,7 +253,10 @@ void ctrader_ssl_connection::async_read_raw_message(void)
                                        << error.value() << "): "
                                        << error.message() << ".";
 
-                on_error(error);
+                if (connection_stage_ != connection_stage_type::CONNECTING)
+                {
+                    on_error(error);
+                }
             }
         });
 }
@@ -259,7 +287,10 @@ void ctrader_ssl_connection::async_read_msg_chunk(void)
                                        << error.value() << "): "
                                        << error.message() << ".";
 
-                on_error(error);
+                if (connection_stage_ != connection_stage_type::CONNECTING)
+                {
+                    on_error(error);
+                }
             }
         });
 }
@@ -289,4 +320,49 @@ void ctrader_ssl_connection::transmit(void)
                 on_error(error);
             }
         });
+}
+
+void ctrader_ssl_connection::try_reconnect_after_a_while(void)
+{
+    connection_attempts_++;
+
+    if (connection_attempts_ == 3001)
+    {
+        hft2ctrader_log(ERROR) << "I can't connect to the cTrader server, tried over 3k times and give up";
+
+        throw std::runtime_error("cTrader server connection error");
+    }
+
+    int delay;
+
+    if (connection_attempts_ > 0 && connection_attempts_ < 10)
+    {
+        delay = 5;
+    }
+    else if (connection_attempts_ >= 10 && connection_attempts_ < 60)
+    {
+        delay = 25;
+    }
+    else
+    {
+        delay = 60;
+    }
+
+    reconnect_timer_.expires_after(boost::asio::chrono::seconds(delay));
+    reconnect_timer_.async_wait(
+        [this](const boost::system::error_code &error)
+        {
+            if (! error)
+            {
+                hft2ctrader_log(INFO) << "Attempt to connect to cTrader, trial #"
+                                      << (connection_attempts_ + 1);
+
+                connect();
+            }
+            else if (error == boost::asio::error::operation_aborted)
+            {
+                hft2ctrader_log(WARNING) << "Attempt to connect to cTrader aborted!";
+            }
+        }
+    );
 }

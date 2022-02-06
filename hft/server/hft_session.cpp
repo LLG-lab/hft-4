@@ -188,7 +188,7 @@ void hft_session::handle_sync_request(const hft::protocol::request::sync &msg, s
     hft_log(INFO) << "hft_session::handle_sync_request: qty [" << msg.qty << "]";
     #endif
 
-    hft::protocol::response resp;
+    hft::protocol::response resp {msg.instrument};
 
     //
     // Find appropriate instrument handler, then dispatch notify to it.
@@ -228,7 +228,7 @@ void hft_session::handle_tick_request(const hft::protocol::request::tick &msg, s
     hft_log(INFO) << "hft_session::handle_tick_request:  equity [" << msg.equity << "]";
     #endif
 
-    hft::protocol::response resp;
+    hft::protocol::response resp {msg.instrument};
 
     //
     // Find appropriate instrument handler, then dispatch notify to it.
@@ -268,7 +268,7 @@ void hft_session::handle_open_notify_request(const hft::protocol::request::open_
     hft_log(INFO) << "hft_session::handle_open_notify_request: price [" << msg.price << "]";
     #endif
 
-    hft::protocol::response resp;
+    hft::protocol::response resp {msg.instrument};
 
     //
     // Find appropriate instrument handler, then dispatch notify to it.
@@ -308,7 +308,7 @@ void hft_session::handle_close_notify_request(const hft::protocol::request::clos
     hft_log(INFO) << "hft_session::handle_close_notify_request: price [" << msg.price << "]";
     #endif
 
-    hft::protocol::response resp;
+    hft::protocol::response resp {msg.instrument};
 
     //
     // Find appropriate instrument handler, then dispatch notify to it.

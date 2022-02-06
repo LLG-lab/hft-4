@@ -18,6 +18,7 @@
 #include <boost/json.hpp>
 #include <boost/dll.hpp>
 
+#include <sms_alert.hpp>
 #include <utilities.hpp>
 #include <hft_ih_dummy.hpp>
 
@@ -198,6 +199,15 @@ const boost::json::object &instrument_handler::json_get_object_attribute(const b
     }
 
     return attr_v.get_object();
+}
+
+//
+// Extra.
+//
+
+void instrument_handler::sms_alert(const std::string &message)
+{
+    sms::alert(message);
 }
 
 //

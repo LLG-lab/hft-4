@@ -46,6 +46,48 @@ public:
     void hft_send_open_notify(const std::string &instrument, const std::string &identifier, bool status, double price);
     void hft_send_close_notify(const std::string &instrument, const std::string &identifier, bool status, double price);
 
+    //
+    // Response from HFT.
+    //
+
+    struct hft_response
+    {
+        hft_response(void) = delete;
+        hft_response(const std::string &payload) { unserialize(payload); }
+
+        struct pos_open_advice_info
+        {
+            pos_open_advice_info(position_type d, const std::string &i, int v)
+                : direction {d}, identifier {i}, volume {v}
+            {}
+
+            position_type direction;
+            std::string identifier;
+            int volume;
+        };
+
+        typedef std::list<pos_open_advice_info> pos_open_advice_info_container;
+        typedef std::list<std::string> pos_close_advice_info_container;
+
+        bool is_error(void) const { return !error_message_.empty(); }
+        bool has_instrument(void) const { return !instrument_.empty(); }
+        std::string get_error_message(void) const { return error_message_; }
+        std::string get_instrument(void) const { return instrument_; }
+        bool has_for_open(void) const { return !new_positions_info_.empty(); }
+        bool has_for_close(void) const { return !close_positions_info_.empty(); }
+        const pos_open_advice_info_container &get_for_open(void) const { return new_positions_info_; }
+        const pos_close_advice_info_container &get_for_close(void) const { return close_positions_info_; }
+
+    private:
+
+        void unserialize(const std::string &payload);
+
+        std::string error_message_;
+        std::string instrument_;
+        pos_open_advice_info_container new_positions_info_;
+        pos_close_advice_info_container close_positions_info_;
+    };
+
 private:
 
     hft_connection &connection_;

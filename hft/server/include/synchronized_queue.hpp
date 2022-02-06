@@ -14,36 +14,51 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __HFT_SERVER_CONFIG__
-#define __HFT_SERVER_CONFIG__
 
-#include <sms_alert.hpp>
+#ifndef __SYNCHRONIZED_QUEUE_HPP__
+#define __SYNCHRONIZED_QUEUE_HPP__
 
-class hft_server_config
+#include <list>
+#include <mutex>
+
+template <typename T>
+class synchronized_queue
 {
 public:
 
-    hft_server_config(const std::string &xml_file_name = "/var/log/hft/server.log");
-    ~hft_server_config(void) = default;
+    size_t size(void) const
+    {
+        std::unique_lock<std::mutex> lck(mtx_);
 
-    std::string get_logging_config(void) const;
-    const sms::config &get_sms_alert_config(void) const { return sms_config_; }
+        return lst_.size();
+    }
+
+    void enqueue(const T &data)
+    {
+        std::unique_lock<std::mutex> lck(mtx_);
+
+        lst_.push_back(data);
+    }
+
+    bool dequeue(T &data)
+    {
+        std::unique_lock<std::mutex> lck(mtx_);
+
+        if (lst_.empty())
+        {
+            return false;
+        }
+
+        data = lst_.front();
+        lst_.pop_front();
+
+        return true;
+    }
 
 private:
 
-    enum logging_severity
-    {
-        HFT_SEVERITY_FATAL   = 0,
-        HFT_SEVERITY_ERROR   = 1,
-        HFT_SEVERITY_WARNING = 2,
-        HFT_SEVERITY_INFO    = 3,
-        HFT_SEVERITY_TRACE   = 4,
-        HFT_SEVERITY_DEBUG   = 5
-    };
+    mutable std::mutex mtx_;
+    std::list<T> lst_;
+};
 
-    logging_severity log_severity_;
-    sms::config sms_config_;
-}; 
-
-#endif /* __HFT_SERVER_CONFIG__ */
-
+#endif /* __SYNCHRONIZED_QUEUE_HPP__ */
