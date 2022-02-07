@@ -44,22 +44,31 @@ private:
 
     typedef struct _bridge_process_info
     {
+        _bridge_process_info(void)
+            : last_respawn {0ul}, respawn_attempts {0}
+        {}
+
         std::string label;
         std::string program;
         std::string start_dir;
+        std::string log_file;
         arguments argv;
         std::shared_ptr<boost::process::child> child;
+        unsigned long last_respawn;
+        int respawn_attempts;
 
     } bridge_process_info;
 
     typedef std::list<bridge_process_info> bridge_process_info_list;
 
-    static std::string prepare_log_file(void);
+    static std::string prepare_log_file(const std::string &log_file_name);
     void parse_proc_list_xml(const std::string &data);
 
+    void execute_process(bridge_process_info &bpi);
     void process_exit_notify(int, const std::error_code &ec);
 
     boost::asio::io_context &ioctx_;
+    boost::asio::steady_timer respawn_timer_;
 
     bridge_process_info_list process_list_;
 };

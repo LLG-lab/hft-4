@@ -24,6 +24,7 @@
 
 #include <marketplace_gateway_process.hpp>
 #include <utilities.hpp>
+#include <sms_alert.hpp>
 
 #include <easylogging++.h>
 
@@ -39,63 +40,23 @@
 namespace fs = boost::filesystem;
 
 marketplace_gateway_process::marketplace_gateway_process(boost::asio::io_context &ioctx, const std::string &config_xml)
-    : ioctx_(ioctx)
+    : ioctx_ {ioctx},
+      respawn_timer_ {ioctx}
 {
     el::Loggers::getLogger("gateway", true);
-
-    std::string log_file_name = marketplace_gateway_process::prepare_log_file();
 
     parse_proc_list_xml(hft::utils::file_get_contents(config_xml));
 
     for (auto &proc_item : process_list_)
     {
-        hft_log(INFO) << "Starting external gateway ‘"
-                      << proc_item.label << "’";
-
-        boost::filesystem::path path_find = proc_item.program;
-        auto start_program = boost::process::search_path(path_find);
-
-        if (start_program.empty())
-        {
-            std::string err_msg = std::string("Unable to find program to start ‘")
-                                  + proc_item.program + std::string("’");
-
-            throw exception(err_msg);
-        }
-        else
-        {
-            hft_log(INFO) << "Found bridge application: ‘" << start_program << "’";
-        }
-
-        proc_item.child.reset(
-            new boost::process::child(
-                    boost::process::exe=start_program.c_str(),
-                    boost::process::args=proc_item.argv,
-                    (boost::process::std_out & boost::process::std_err) > log_file_name,
-                    boost::process::start_dir=proc_item.start_dir,
-                    boost::process::on_exit=boost::bind(&marketplace_gateway_process::process_exit_notify, this, _1, _2),
-                    ioctx_
-            )
-        );
-
-        std::error_code ec;
-
-        if (! proc_item.child -> running(ec))
-        {
-            hft_log(ERROR) << "Bridge process failed with error: ‘"
-                           << ec << "’";
-
-            throw exception("Failed to start marketplace bridge process");
-        }
-        else
-        {
-            hft_log(INFO) << "Bridge process successfully started, " << ec;
-        }
+        execute_process(proc_item);
     }
 }
 
 marketplace_gateway_process::~marketplace_gateway_process(void)
 {
+    respawn_timer_.cancel();
+
     // FIXME: Spróbować najpierw zakończyć proces „po dobremu”
     //        a jesli sie nie zakończy w odpowiednim czasie,
     //        wtedy terminate(). W ten sposób damy szansę na
@@ -114,9 +75,9 @@ marketplace_gateway_process::~marketplace_gateway_process(void)
     }
 }
 
-std::string marketplace_gateway_process::prepare_log_file(void)
+std::string marketplace_gateway_process::prepare_log_file(const std::string &log_file_name)
 {
-    std::string regular_log_file = "/var/log/hft/bridge.log";
+    std::string regular_log_file = "/var/log/hft/" + log_file_name;
 
     auto p = fs::path(regular_log_file);
     boost::system::error_code ec;
@@ -131,7 +92,7 @@ std::string marketplace_gateway_process::prepare_log_file(void)
         fs::rename(p, fs::path(hft::utils::find_free_name(regular_log_file)));
     }
 
-    if (ec)
+    if (ec && ec.value() != 2)
     {
         hft_log(ERROR) << "Raised system error (" << ec.value()
                        << "): ‘" << ec.message() << "’";
@@ -191,6 +152,10 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
              std::cout << "New ‘process’ node\n";
              #endif
 
+             //
+             // Obtain name.
+             //
+
              xml_attribute<> *name_attr = node -> first_attribute("name");
 
              if (name_attr == nullptr)
@@ -203,6 +168,10 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
              #endif
 
              bpi.label = hft::utils::expand_env_variable(name_attr -> value());
+
+             //
+             // Obtain active attribute.
+             //
 
              xml_attribute<> *active_attr = node -> first_attribute("active");
 
@@ -241,6 +210,10 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
                  throw exception(error.str());
              }
 
+             //
+             // Obtain exec.
+             //
+
              xml_node<> *exec_node = node -> first_node("exec");
 
              if (exec_node == nullptr)
@@ -253,6 +226,10 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
              #endif
 
              bpi.program = hft::utils::expand_env_variable(exec_node -> value());
+
+             //
+             // Obtain initial dir.
+             //
 
              xml_node<> *initial_dir_node = node -> first_node("initial-dir");
 
@@ -267,7 +244,26 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
 
              bpi.start_dir = hft::utils::expand_env_variable(initial_dir_node -> value());
 
-             for (xml_node<> *param_node = node -> first_node("param"); param_node; param_node = param_node -> next_sibling())
+             //
+             // Obtain log file name (not mandatory).
+             //
+
+             xml_node<> *log_file_name_node = node -> first_node("log-file-name");
+
+             if (log_file_name_node == nullptr)
+             {
+                 bpi.log_file = "bridge.log";
+             }
+             else
+             {
+                 bpi.log_file = hft::utils::expand_env_variable(log_file_name_node -> value());
+             }
+
+             //
+             // Obtain program parameters.
+             //
+
+             for (xml_node<> *param_node = node -> first_node("param"); param_node; param_node = param_node -> next_sibling("param"))
              {
                  #ifdef TEST
                  std::cout << "\tparam:   " << hft::utils::expand_env_variable(param_node -> value()) << "\n";
@@ -281,17 +277,122 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
     }
 }
 
-void marketplace_gateway_process::process_exit_notify(int, const std::error_code &ec)
+void marketplace_gateway_process::execute_process(bridge_process_info &bpi)
 {
-    for (auto &bpi : process_list_)
+    hft_log(INFO) << "Starting external gateway ‘"
+                  << bpi.label << "’";
+
+    std::string log_file_name = marketplace_gateway_process::prepare_log_file(bpi.log_file);
+
+    boost::filesystem::path path_find = bpi.program;
+
+    //
+    // Most preferable directory for find executable
+    // is directory specified as start directory.
+    //
+
+    auto search_in = ::boost::this_process::path();
+    search_in.insert(search_in.begin(), boost::filesystem::path(bpi.start_dir));
+
+    auto start_program = boost::process::search_path(path_find, search_in);
+
+    if (start_program.empty())
     {
-        if (bpi.child.use_count() && ! bpi.child -> running())
-        {
-            hft_log(ERROR) << "Bridge process ‘" << bpi.label
-                           << "’ terminated unexpectedly, error: ‘"
-                           << ec << "’";
-        }
+        std::string err_msg = std::string("Unable to find program to start ‘")
+                              + bpi.program + std::string("’");
+
+        throw exception(err_msg);
+    }
+    else
+    {
+        hft_log(INFO) << "Found bridge application: ‘" << start_program << "’";
     }
 
-    throw exception("Bridge process terminated unexpectedly");
+    bpi.child.reset(
+        new boost::process::child(
+                boost::process::exe=start_program.c_str(),
+                boost::process::args=bpi.argv,
+                (boost::process::std_out & boost::process::std_err) > log_file_name,
+                boost::process::start_dir=bpi.start_dir,
+                boost::process::on_exit=boost::bind(&marketplace_gateway_process::process_exit_notify, this, _1, _2),
+                ioctx_
+        )
+    );
+
+    std::error_code ec;
+
+    if (! bpi.child -> running(ec))
+    {
+        hft_log(ERROR) << "Bridge process failed with error: ‘"
+                       << ec << "’";
+
+        throw exception("Failed to start marketplace bridge process");
+    }
+    else
+    {
+        hft_log(INFO) << "Bridge process successfully started, " << ec;
+    }
+}
+
+void marketplace_gateway_process::process_exit_notify(int, const std::error_code &ec)
+{
+    respawn_timer_.cancel();
+    respawn_timer_.expires_after(boost::asio::chrono::seconds(1));
+    respawn_timer_.async_wait(
+        [this](const boost::system::error_code &error)
+        {
+            if (! error)
+            {
+                for (auto &bpi : process_list_)
+                {
+                    if (bpi.child.use_count() && ! bpi.child -> running())
+                    {
+                        hft_log(ERROR) << "Bridge process ‘" << bpi.label
+                                       << "’ terminated unexpectedly.";
+
+                        auto now = hft::utils::get_current_timestamp();
+
+                        if (now - bpi.last_respawn > 5*60*1000000)
+                        {
+                            //
+                            // If last respawn was long time ago
+                            // (more than 5 minutes ago), we reset
+                            // the counter.
+                            //
+
+                            bpi.respawn_attempts = 0;
+                        }
+                        else
+                        {
+                            bpi.respawn_attempts++;
+                        }
+
+                        if (bpi.respawn_attempts < 10)
+                        {
+                            bpi.last_respawn = now;
+
+                            try
+                            {
+                                execute_process(bpi);
+                            }
+                            catch (const exception &e)
+                            {
+                                hft_log(ERROR) << "Failed to execute process: "
+                                               << e.what();
+
+                                sms::alert(std::string("Bridge process") + bpi.label + std::string(" is dead."));
+                            }
+                        }
+                        else
+                        {
+                            hft_log(ERROR) << "Will no try respawn process, tried 10 times. "
+                                           << "Bridge process " << bpi.label
+                                           << " constatnly crashes.";
+
+                            sms::alert(std::string("Bridge process") + bpi.label + std::string(" is dead."));
+                        }
+                    }
+                }
+            }
+       });
 }

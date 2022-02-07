@@ -199,9 +199,11 @@ int hft_server_main(int argc, char *argv[])
         std::cerr << "**** FATAL ERROR: "
                   << e.what() << std::endl;
 
-        hft_log(FATAL) << "**** FATAL ERROR: " << e.what();
-
         el::base::debug::StackTrace();
+
+        hft_log(ERROR) << "**** Goining to terminate server due to FATAL: " << e.what();
+
+        sms::alert(std::string("terminated server: ") + e.what());
 
         return 1;
     }
