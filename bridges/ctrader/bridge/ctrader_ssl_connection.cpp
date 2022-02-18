@@ -24,7 +24,7 @@
 #define hft2ctrader_log(__X__) \
     CLOG(__X__, "ssl_connection")
 
-ctrader_ssl_connection::ctrader_ssl_connection(boost::asio::io_context& io_context, const hft2ctrader_bridge_config &cfg)
+ctrader_ssl_connection::ctrader_ssl_connection(boost::asio::io_context& io_context, const hft2ctrader_config &cfg)
     : ctrader_port_ { "5035" },
       ctrader_host_ { "" },
       connection_attempts_ {0},
@@ -36,10 +36,10 @@ ctrader_ssl_connection::ctrader_ssl_connection(boost::asio::io_context& io_conte
 {
     switch (cfg.get_account_type())
     {
-        case hft2ctrader_bridge_config::account_type::DEMO_ACCOUNT:
+        case hft2ctrader_config::account_type::DEMO_ACCOUNT:
              ctrader_host_ = "demo.ctraderapi.com";
              break;
-        case  hft2ctrader_bridge_config::account_type::LIVE_ACCOUNT:
+        case hft2ctrader_config::account_type::LIVE_ACCOUNT:
              ctrader_host_ = "live.ctraderapi.com";
              break;
         default:
@@ -317,7 +317,10 @@ void ctrader_ssl_connection::transmit(void)
                                        << error.value() << "): "
                                        << error.message() << ".";
 
-                on_error(error);
+                if (connection_stage_ != connection_stage_type::CONNECTING)
+                {
+                    on_error(error);
+                }
             }
         });
 }

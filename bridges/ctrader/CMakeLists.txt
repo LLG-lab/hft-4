@@ -43,7 +43,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/hft2ctrader-config.h
      ${PROJECT_SOURCE_DIR}/bridge/include/aux_functions.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/market_types.hpp
-     ${PROJECT_SOURCE_DIR}/bridge/include/hft2ctrader_bridge_config.hpp
+     ${PROJECT_SOURCE_DIR}/bridge/include/hft2ctrader_config.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_ssl_connection.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_api.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/proxy_core.hpp
@@ -62,13 +62,14 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/draft_main.cpp
      ${PROJECT_SOURCE_DIR}/bridge/aux_functions.cpp
      ${PROJECT_SOURCE_DIR}/bridge/hft2ctrade_bridge_main.cpp
-     ${PROJECT_SOURCE_DIR}/bridge/hft2ctrader_bridge_config.cpp
+     ${PROJECT_SOURCE_DIR}/bridge/hft2ctrader_config.cpp
      ${PROJECT_SOURCE_DIR}/bridge/ctrader_ssl_connection.cpp
      ${PROJECT_SOURCE_DIR}/bridge/ctrader_api.cpp
      ${PROJECT_SOURCE_DIR}/bridge/hft_api.cpp
      ${PROJECT_SOURCE_DIR}/bridge/proxy_core.cpp
      ${PROJECT_SOURCE_DIR}/bridge/hft_connection.cpp
      ${PROJECT_SOURCE_DIR}/bridge/proxy_session.cpp
+     ${PROJECT_SOURCE_DIR}/history-ticks/history_ticks_main.cpp
      ${PROJECT_SOURCE_DIR}/../../3rd-party/easylogging++/easylogging++.cc
 )
 
@@ -108,6 +109,10 @@ endif()
 SET(TEMP "${TEMP} -DBOOST_SYSTEM_NO_DEPRECATED" )
 SET(TEMP "${TEMP} -DBOOST_ERROR_CODE_HEADER_ONLY" )
 SET(TEMP "${TEMP} -DBOOST_BIND_GLOBAL_PLACEHOLDERS" )
+
+SET(TEMP "${TEMP} -DBOOST_MPL_CFG_NO_PREPROCESSED_HEADERS" )
+SET(TEMP "${TEMP} -DBOOST_MPL_LIMIT_VECTOR_SIZE=30" )
+SET(TEMP "${TEMP} -DBOOST_MPL_LIMIT_MAP_SIZE=30" )
 
 SET(TEMP "${TEMP} -DELPP_THREAD_SAFE" )
 SET(TEMP "${TEMP} -DELPP_STL_LOGGING" )

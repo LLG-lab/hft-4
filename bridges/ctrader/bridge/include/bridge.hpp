@@ -33,7 +33,7 @@ public:
 
     bridge(bridge &&) = delete;
 
-    bridge(boost::asio::io_context &io_context, const hft2ctrader_bridge_config &cfg)
+    bridge(boost::asio::io_context &io_context, const hft2ctrader_config &cfg)
         : ctrader_conn_ { io_context, cfg },
           hft_conn_ { io_context, cfg },
           sm_ { ctrader_conn_, hft_conn_, cfg }
@@ -61,6 +61,7 @@ public:
             });
 
         ctrader_conn_.connect();
+        hft_conn_.connect();
     }
 
 private:

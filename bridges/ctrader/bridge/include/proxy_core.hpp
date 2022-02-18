@@ -19,11 +19,12 @@
 
 #include <map>
 #include <list>
+
 #include <boost/msm/front/state_machine_def.hpp>
 
 #include <ctrader_api.hpp>
 #include <hft_api.hpp>
-#include <hft2ctrader_bridge_config.hpp>
+#include <hft2ctrader_config.hpp>
 
 namespace msm = boost::msm;
 namespace mpl = boost::mpl;
@@ -38,7 +39,7 @@ public:
 
     proxy_core(proxy_core &&) = delete;
 
-    proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_bridge_config &config);
+    proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_config &config);
 
     virtual ~proxy_core(void) = default;
 
@@ -106,6 +107,7 @@ public:
     bool has_position_informations(ctrader_data_event const &event);
     void dispatch_ctrader_data_event(ctrader_data_event const &event);
     void dispatch_hft_data_event(hft_data_event const &event);
+    void hft_data_event_broker_disconnected(hft_data_event const &event);
 
     typedef proxy_core pc; // Makes transition table cleaner.
 
@@ -113,21 +115,27 @@ public:
     struct transition_table : mpl::vector<
         //    Start                    Event                      Next                      Action                                         Guard
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
+      a_row < wait_for_connect        , pc::hft_data_event                , wait_for_connect        , &pc::hft_data_event_broker_disconnected                                       >,
       a_row < wait_for_connect        , pc::ctrader_connection_event      , app_authorization       , &pc::start_app_authorization                                                  >,
        _row < wait_for_connect        , pc::ctrader_connection_error_event, wait_for_connect                                                                                        >,
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
+      a_row < app_authorization       , pc::hft_data_event                , app_authorization       , &pc::hft_data_event_broker_disconnected                                       >,
         row < app_authorization       , pc::ctrader_data_event            , account_authorization   , &pc::start_account_authorization           , &pc::is_app_authorized           >,
        _row < app_authorization       , pc::ctrader_connection_error_event, wait_for_connect                                                                                        >,
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
+      a_row < account_authorization   , pc::hft_data_event                , account_authorization   , &pc::hft_data_event_broker_disconnected                                       >,
         row < account_authorization   , pc::ctrader_data_event            , account_informations    , &pc::start_acquire_account_informations    , &pc::is_account_authorized       >,
        _row < account_authorization   , pc::ctrader_connection_error_event, wait_for_connect                                                                                        >,
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
+      a_row < account_informations    , pc::hft_data_event                , account_informations    , &pc::hft_data_event_broker_disconnected                                       >,
         row < account_informations    , pc::ctrader_data_event            , instrument_informations , &pc::start_acquire_instrument_informations , &pc::has_account_informations    >,
        _row < account_informations    , pc::ctrader_connection_error_event, wait_for_connect                                                                                        >,
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
+      a_row < instrument_informations , pc::hft_data_event                , instrument_informations , &pc::hft_data_event_broker_disconnected                                       >,
         row < instrument_informations , pc::ctrader_data_event            , position_informations   , &pc::start_acquire_position_informations   , &pc::has_instrument_informations >,
        _row < instrument_informations , pc::ctrader_connection_error_event, wait_for_connect                                                                                        >,
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
+      a_row < position_informations   , pc::hft_data_event                , position_informations   , &pc::hft_data_event_broker_disconnected                                       >,
         row < position_informations   , pc::ctrader_data_event            , operational             , &pc::initialize_bridge                     , &pc::has_position_informations   >,
        _row < position_informations   , pc::ctrader_connection_error_event, wait_for_connect                                                                                        >,
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
@@ -144,8 +152,10 @@ protected:
     //
 
     double get_balance(void) const { return account_balance_; }
+    std::string get_broker(void) const { return broker_; }
     const positions_container &get_opened_positions(void) const { return positions_; }
     std::string get_instrument_ticker(int instrument_id) const;
+    static std::string position_type_str(const position_type &pt);
     double get_free_margin(void); //const;
 
     bool ctrader_subscribe_instruments_ex(const instruments_container &instruments);
@@ -162,7 +172,7 @@ protected:
     virtual void on_position_open_error(const order_error_info &order_error) = 0;
     virtual void on_position_close(const closed_position_info &closed_position) = 0;
     virtual void on_position_close_error(const order_error_info &order_error) = 0;
-    virtual void on_hft_advice(const hft_api::hft_response &adv) = 0;
+    virtual void on_hft_advice(const hft_api::hft_response &adv, bool broker_ready) = 0;
 
 private:
 
@@ -175,13 +185,14 @@ private:
 
     positions_container positions_;
 
-    const hft2ctrader_bridge_config &config_;
+    const hft2ctrader_config &config_;
 
     std::map<std::string, int> ticker2id_;
     std::map<int, std::string> id2ticker_;
     std::map<int, tick_type>   instruments_tick_;
 
     double account_balance_;
+    std::string broker_;
 
     unsigned long last_heartbeat_;
     unsigned long registration_timestamp_;

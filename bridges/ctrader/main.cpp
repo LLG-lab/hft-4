@@ -37,6 +37,7 @@ typedef int (*program)(int, char **);
 
 int draft_main(int argc, char *argv[]);
 int hft2ctrade_bridge_main(int argc, char *argv[]);
+int history_ticks_main(int argc, char *argv[]);
 
 static struct
 {
@@ -44,8 +45,9 @@ static struct
     program start_program;
 
 } hft2ctrader_programs[] = {
-    { .name = "draft",   .start_program = &draft_main },
-    { .name = "bridge",  .start_program = &hft2ctrade_bridge_main }
+    { .name = "draft",         .start_program = &draft_main },
+    { .name = "history-ticks", .start_program = &history_ticks_main },
+    { .name = "bridge",        .start_program = &hft2ctrade_bridge_main }
 };
 
 int main(int argc, char *argv[])
@@ -60,7 +62,9 @@ int main(int argc, char *argv[])
             std::cout << "Usage:\n"
                       << "  hft2ctrader <command> [tool options]\n\n"
                       << "Available commands:\n"
-                      << "  bridge        Bridge between HFT and cTrader proxy\n"
+                      << "  bridge          Bridge between HFT and cTrader proxy\n"
+                      << "  history-ticks   Download historical ticks to CSV file for particular instrument\n"
+                      << "                  and specified time\n"
                       << "\n\nType ‘hft2ctrader <command> --help’ for more info about options for particular command.\n\n";
 
             return 0;

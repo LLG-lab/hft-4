@@ -23,7 +23,7 @@
 #include <vector>
 #include <list>
 
-#include <hft2ctrader_bridge_config.hpp>
+#include <hft2ctrader_config.hpp>
 
 class ctrader_ssl_connection
 {
@@ -33,7 +33,7 @@ public:
     ctrader_ssl_connection(ctrader_ssl_connection &) = delete;
     ctrader_ssl_connection(ctrader_ssl_connection &&) = delete;
 
-    ctrader_ssl_connection(boost::asio::io_context &io_context, const hft2ctrader_bridge_config &cfg);
+    ctrader_ssl_connection(boost::asio::io_context &io_context, const hft2ctrader_config &cfg);
 
     ~ctrader_ssl_connection(void);
 

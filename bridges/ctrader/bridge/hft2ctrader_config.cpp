@@ -21,9 +21,9 @@
 
 #include <rapidxml-1.13/rapidxml.hpp>
 
-#include <hft2ctrader_bridge_config.hpp>
+#include <hft2ctrader_config.hpp>
 
-hft2ctrader_bridge_config::logging_severity_type hft2ctrader_bridge_config::severity_str2severity_type(const std::string &s)
+hft2ctrader_config::logging_severity_type hft2ctrader_config::severity_str2severity_type(const std::string &s)
 {
     if (s == "FATAL")   return logging_severity_type::FATAL;
     if (s == "ERROR")   return logging_severity_type::ERROR;
@@ -37,9 +37,9 @@ hft2ctrader_bridge_config::logging_severity_type hft2ctrader_bridge_config::seve
     throw std::runtime_error(error);
 }
 
-std::string hft2ctrader_bridge_config::get_logging_config(const std::string &severity_str) const
+std::string hft2ctrader_config::get_logging_config_bridge(const std::string &severity_str) const
 {
-    auto severity = hft2ctrader_bridge_config::severity_str2severity_type(severity_str);
+    auto severity = hft2ctrader_config::severity_str2severity_type(severity_str);
 
     std::ostringstream logconf;
 
@@ -68,7 +68,24 @@ std::string hft2ctrader_bridge_config::get_logging_config(const std::string &sev
     return logconf.str();
 }
 
-void hft2ctrader_bridge_config::xml_parse(const std::string &xml_file_name)
+std::string hft2ctrader_config::get_logging_config_utility(void) const
+{
+    std::ostringstream logconf;
+
+    logconf << "* GLOBAL:\n"
+            << " FORMAT               =  \"" << broker_ <<" %level [%logger] %msg\"\n"
+            << " ENABLED              =  true\n"
+            << " TO_FILE              =  false\n"
+            << " TO_STANDARD_OUTPUT   =  true\n"
+            << " SUBSECOND_PRECISION  =  1\n"
+            << " PERFORMANCE_TRACKING =  true\n"
+            << " MAX_LOG_FILE_SIZE    =  10485760 ## 10MiB\n"
+            << " LOG_FLUSH_THRESHOLD  =  1 ## Flush after every single log\n";
+
+    return logconf.str();
+}
+
+void hft2ctrader_config::xml_parse(const std::string &xml_file_name)
 {
     using namespace rapidxml;
 
@@ -223,7 +240,7 @@ void hft2ctrader_bridge_config::xml_parse(const std::string &xml_file_name)
     }
 }
 
-void hft2ctrader_bridge_config::xml_parse_auth(void *node, const std::string &xml_file_name)
+void hft2ctrader_config::xml_parse_auth(void *node, const std::string &xml_file_name)
 {
     using namespace rapidxml;
 
@@ -314,7 +331,7 @@ void hft2ctrader_bridge_config::xml_parse_auth(void *node, const std::string &xm
     auth_account_id_ = std::stoi(std::string(account_id_node -> value()));
 }
 
-void hft2ctrader_bridge_config::xml_parse_instrument(void *node, const std::string &xml_file_name)
+void hft2ctrader_config::xml_parse_instrument(void *node, const std::string &xml_file_name)
 {
     using namespace rapidxml;
 

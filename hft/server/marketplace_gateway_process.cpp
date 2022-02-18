@@ -49,7 +49,7 @@ marketplace_gateway_process::marketplace_gateway_process(boost::asio::io_context
 
     for (auto &proc_item : process_list_)
     {
-        execute_process(proc_item);
+        execute_process(proc_item, true);
     }
 }
 
@@ -75,14 +75,14 @@ marketplace_gateway_process::~marketplace_gateway_process(void)
     }
 }
 
-std::string marketplace_gateway_process::prepare_log_file(const std::string &log_file_name)
+std::string marketplace_gateway_process::prepare_log_file(const std::string &log_file_name, bool new_log_file)
 {
     std::string regular_log_file = "/var/log/hft/" + log_file_name;
 
     auto p = fs::path(regular_log_file);
     boost::system::error_code ec;
 
-    if (fs::exists(p, ec))
+    if (new_log_file && fs::exists(p, ec))
     {
         //
         // There is remainder log file from
@@ -277,12 +277,12 @@ void marketplace_gateway_process::parse_proc_list_xml(const std::string &xml_dat
     }
 }
 
-void marketplace_gateway_process::execute_process(bridge_process_info &bpi)
+void marketplace_gateway_process::execute_process(bridge_process_info &bpi, bool new_log_file)
 {
     hft_log(INFO) << "Starting external gateway ‘"
                   << bpi.label << "’";
 
-    std::string log_file_name = marketplace_gateway_process::prepare_log_file(bpi.log_file);
+    std::string log_file_name = marketplace_gateway_process::prepare_log_file(bpi.log_file, new_log_file);
 
     boost::filesystem::path path_find = bpi.program;
 
@@ -373,7 +373,7 @@ void marketplace_gateway_process::process_exit_notify(int, const std::error_code
 
                             try
                             {
-                                execute_process(bpi);
+                                execute_process(bpi, false);
                             }
                             catch (const exception &e)
                             {

@@ -14,35 +14,22 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __PROXY_SESSION_HPP__
-#define __PROXY_SESSION_HPP__
+#ifndef __HISTORY_TICKS_HPP__
+#define __HISTORY_TICKS_HPP__
 
-#include <proxy_core.hpp>
-
-class proxy_session : public proxy_core
+class history_ticks
 {
 public:
 
-    proxy_session(void) = delete;
-    proxy_session(proxy_session &) = delete;
-    proxy_session(proxy_session &&) = delete;
-    proxy_session(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_config &config);
+    history_ticks(void) = delete;
 
-protected:
+    history_ticks(history_ticks &) = delete;
 
-    virtual void on_init(void) override;
-    virtual void on_tick(const tick_type &tick) override;
-    virtual void on_position_open(const position_info &position) override;
-    virtual void on_position_open_error(const order_error_info &order_error) override;
-    virtual void on_position_close(const closed_position_info &closed_position) override;
-    virtual void on_position_close_error(const order_error_info &order_error) override;
-    virtual void on_hft_advice(const hft_api::hft_response &adv, bool broker_ready) override;
+    history_ticks(history_ticks &&) = delete;
 
-private:
+    history_ticks(boost::asio::io_context &io_context, const hft2ctrader_config &cfg)
 
-    bool hft_session_initialized_;
-
-    const hft2ctrader_config &config_;
+    ~history_ticks(void) = default;
 };
 
-#endif /* __PROXY_SESSION_HPP__ */
+#endif /* __HISTORY_TICKS_HPP__ */

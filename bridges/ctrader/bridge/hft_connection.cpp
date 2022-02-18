@@ -21,7 +21,7 @@
 #define hft2ctrader_log(__X__) \
     CLOG(__X__, "hft_connection")
 
-hft_connection::hft_connection(boost::asio::io_context &io_context, const hft2ctrader_bridge_config &cfg)
+hft_connection::hft_connection(boost::asio::io_context &io_context, const hft2ctrader_config &cfg)
     : socket_ {io_context}, reconnect_timer_ {io_context}, input_buffer_ {}, send_buffers_ {},
       hft_host_ { cfg.get_hft_host() }, hft_port_ { std::to_string(cfg.get_hft_port())},
       connected_ { false }, connection_attempts_{0}, ioctx_ {io_context}

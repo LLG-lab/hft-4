@@ -61,10 +61,10 @@ private:
 
     typedef std::list<bridge_process_info> bridge_process_info_list;
 
-    static std::string prepare_log_file(const std::string &log_file_name);
+    static std::string prepare_log_file(const std::string &log_file_name, bool new_log_file);
     void parse_proc_list_xml(const std::string &data);
 
-    void execute_process(bridge_process_info &bpi);
+    void execute_process(bridge_process_info &bpi, bool new_log_file);
     void process_exit_notify(int, const std::error_code &ec);
 
     boost::asio::io_context &ioctx_;

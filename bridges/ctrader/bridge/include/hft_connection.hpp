@@ -23,7 +23,7 @@
 #include <string>
 #include <list>
 
-#include <hft2ctrader_bridge_config.hpp>
+#include <hft2ctrader_config.hpp>
 
 class hft_connection
 {
@@ -33,7 +33,7 @@ public:
     hft_connection(hft_connection &) = delete;
     hft_connection(hft_connection &&) = delete;
 
-    hft_connection(boost::asio::io_context &io_context, const hft2ctrader_bridge_config &cfg);
+    hft_connection(boost::asio::io_context &io_context, const hft2ctrader_config &cfg);
 
     ~hft_connection(void);
 

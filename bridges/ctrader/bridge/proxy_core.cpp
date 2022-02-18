@@ -40,7 +40,7 @@ void display_closepositiondetail(const ProtoOAClosePositionDetail &cpd, const st
 
 } // namespace.
 
-proxy_core::proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_bridge_config &config)
+proxy_core::proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_config &config)
     : ctrader_api {ctrader_conn}, hft_api {hft_conn}, config_{config},
       last_heartbeat_ {0ul},
       registration_timestamp_ {0ul}
@@ -485,7 +485,21 @@ void proxy_core::dispatch_hft_data_event(hft_data_event const &event)
     {
         hft_api::hft_response rsp {event.data_};
 
-        on_hft_advice(rsp);
+        on_hft_advice(rsp, true);
+    }
+    catch (const std::exception &e)
+    {
+        hft2ctrader_log(ERROR) << "Response ERROR: ‘" << e.what() << "’";
+    }
+}
+
+void proxy_core::hft_data_event_broker_disconnected(hft_data_event const &event)
+{
+    try
+    {
+        hft_api::hft_response rsp {event.data_};
+
+        on_hft_advice(rsp, false);
     }
     catch (const std::exception &e)
     {
@@ -972,7 +986,9 @@ void proxy_core::handle_oa_trader(const ProtoOATrader &trader)
 
     if (trader.has_brokername())
     {
-        hft2ctrader_log(INFO) << "    Broker: " << trader.brokername();
+        broker_ = trader.brokername();
+
+        hft2ctrader_log(INFO) << "    Broker: " << broker_;
     }
 
     if (trader.has_registrationtimestamp())
@@ -998,6 +1014,19 @@ std::string proxy_core::get_instrument_ticker(int instrument_id) const
     }
 
     return it -> second;
+}
+
+std::string proxy_core::position_type_str(const position_type &pt)
+{
+    switch (pt)
+    {
+        case position_type::LONG_POSITION:
+             return "LONG";
+        case position_type::SHORT_POSITION:
+             return "SHORT";
+    }
+
+    return "???";
 }
 
 double proxy_core::get_free_margin(void) //const

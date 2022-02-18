@@ -14,13 +14,13 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __HFT2CTRADER_BRIDGE_CONFIG_HPP__
-#define __HFT2CTRADER_BRIDGE_CONFIG_HPP__
+#ifndef __HFT2CTRADER_CONFIG_HPP__
+#define __HFT2CTRADER_CONFIG_HPP__
 
 #include <string>
 #include <vector>
 
-class hft2ctrader_bridge_config
+class hft2ctrader_config
 {
 public:
 
@@ -31,18 +31,36 @@ public:
         LIVE_ACCOUNT = 2
     };
 
-    hft2ctrader_bridge_config(void) = delete;
-    hft2ctrader_bridge_config(hft2ctrader_bridge_config &) = delete;
-    hft2ctrader_bridge_config(hft2ctrader_bridge_config &&) = delete;
+    hft2ctrader_config(void) = delete;
+    hft2ctrader_config(hft2ctrader_config &) = delete;
+    hft2ctrader_config(hft2ctrader_config &&) = delete;
 
-    hft2ctrader_bridge_config(const std::string &config_file_name, const std::string &broker, const std::string &hft_host, int hft_port)
-        : broker_(broker), auth_account_id_(0), account_(account_type::UNDEFINED),
-          hft_host_(hft_host), hft_port_(hft_port)
+    hft2ctrader_config(const std::string &config_file_name, const std::string &broker)
+        : broker_ {broker}, auth_account_id_ {0}, account_ {account_type::UNDEFINED},
+          hft_host_ {"127.0.0.1"}, hft_port_ {8137},
+          instrument_ {}, begin_week_ {0}, end_week_ {}
     { xml_parse(config_file_name); }
 
-    ~hft2ctrader_bridge_config(void) = default;
+    ~hft2ctrader_config(void) = default;
 
-    std::string get_logging_config(const std::string &severity_str) const;
+    //
+    // Settable user options.
+    //
+
+    // For bridge.
+    void set_hft_host(const std::string hft_host) { hft_host_ = hft_host; }
+    void set_hft_port(int hft_port) { hft_port_ = hft_port; }
+    // For history-ticks.
+    void set_instrument(const std::string &instrument) { instrument_ = instrument; }
+    void set_begin_week(int week) { begin_week_ = week; }
+    void set_end_week(int week) { end_week_ = week; }
+
+    //
+    // Getters.
+    //
+
+    std::string get_logging_config_bridge(const std::string &severity_str) const;
+    std::string get_logging_config_utility(void) const;
 
     std::string get_auth_client_id(void) const { return auth_client_id_; }
     std::string get_auth_client_secret(void) const { return auth_client_secret_; }
@@ -52,8 +70,10 @@ public:
     std::string get_session_id(void) const { return session_id_; }
     std::string get_hft_host(void) const { return hft_host_; }
     int get_hft_port(void) const { return hft_port_; }
-
     std::vector<std::string> get_instruments(void) const { return instruments_; }
+    std::string get_instrument(void) const { return instrument_; }
+    int get_begin_week(void) const { return begin_week_; }
+    int get_end_week(void) const { return end_week_; }
 
 private:
 
@@ -85,6 +105,10 @@ private:
 
     std::string hft_host_;
     int hft_port_;
+
+    std::string instrument_;
+    int begin_week_;
+    int end_week_;
 };
 
-#endif /* __HFT2CTRADER_BRIDGE_CONFIG_HPP__ */
+#endif /* __HFT2CTRADER_CONFIG_HPP__ */
