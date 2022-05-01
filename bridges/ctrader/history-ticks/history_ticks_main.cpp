@@ -14,6 +14,8 @@
 **                                                                    **
 \**********************************************************************/
 
+#include <iostream>
+
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -22,6 +24,8 @@
 #include <hft2ctrader_config.hpp>
 #include <ctrader_ssl_connection.hpp>
 #include <ctrader_api.hpp>
+
+#include <easylogging++.h>
 
 namespace prog_opts = boost::program_options;
 

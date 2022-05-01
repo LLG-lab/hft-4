@@ -39,6 +39,10 @@ pushd bridges/dukascopy
 cat pom.xml.in | sed "s/@HFTVERSION@/$(< ../../version)/g" > pom.xml
 mvn clean install
 popd
+pushd  bridges/ctrader
+scl enable devtoolset-7 "./configure --release"
+scl enable devtoolset-7 make
+popd
 pushd etc/deploy
 cat hft-config.xml.in | sed "s/@HFTVERSION@/$(< ../../version)/g" > hft-config.xml
 popd
@@ -120,15 +124,19 @@ mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/sessions
 mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers
 mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways
 mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/dukascopy
+mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/ctrader
 # Install instrument handlers
 install -m 755 -p instrument-handlers/smart_martingale/libsmart_martingale.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
-#Dukascopy bridge
+# Install Dukascopy bridge
 install -m 644 -p bridges/dukascopy/target/hft-bridge-$(< version).jar $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/dukascopy/hft-bridge-$(< version).jar
 find /root/.m2/repository/ -name "*.jar" | while read line ; do install -m 644 -p  "$line" $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/dukascopy/ ; done
+# Install cTrader bridge
+install -m 755 -p bridges/ctrader/hft2ctrader $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/ctrader/hft2ctrader
 
 %post
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/hft/{instrument-handlers,sessions,marketplace-gateways}
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/hft/marketplace-gateways/dukascopy
+mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/hft/marketplace-gateways/ctrader
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/hft
 %systemd_post hft.service
 
@@ -146,6 +154,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_sbindir}/hft
 %{_unitdir}/hft.service
 %{_sharedstatedir}/hft/marketplace-gateways/dukascopy/*.jar
+%{_sharedstatedir}/hft/marketplace-gateways/ctrader/hft2ctrader
 %{_sysconfdir}/hft/session-defaults/AUDUSD/manifest.json
 %{_sysconfdir}/hft/session-defaults/COPPER.CMDUSD/manifest.json
 %{_sysconfdir}/hft/session-defaults/EUS.IDXEUR/manifest.json

@@ -40,6 +40,16 @@
 			<param>--port=$(HFT_PORT)</param>
 			<param>--host=$(HFT_ENDPOINT)</param>
 		</process>
+		<process name="IC Markets" active="false">
+			<exec>hft2ctrader</exec>
+			<log-file-name>icmarkets.log</log-file-name>
+			<initial-dir>/var/lib/hft/marketplace-gateways/ctrader</initial-dir>
+			<param>bridge</param>
+			<param>--hft-ipc-endpoint=$(HFT_ENDPOINT)</param>
+			<param>--hft-ipc-port=$(HFT_PORT)</param>
+			<param>--log-severity=INFO</param>
+			<param>--broker=IC Markets</param>
+		</process>
 	</market-gateway-processes>
 
 	<market bridge="Dukascopy" sessid="dukascopy-session" >
@@ -57,6 +67,23 @@
 			here is an example:
 
 			<instrument ticker="EUR/USD"/>
+		-->
+	</market>
+
+	<market bridge="IC Markets" sessid="icmarkets-session" >
+		<auth account="demo">
+			<client-id>3383_y6jxYgYnMyO9inyayd2oFsoxdnkAkydoStzM0HM6nTScqmK7vD</client-id>
+			<client-secret>21fIJ9Xvk6ZYMz7gR65qBn5DvcUT0C8tBQ4zoz8GNFakGvdrPE</client-secret>
+			<access-token>Bqr32tgJVqXFOIlexqYFdxddgY8hrpOJQKnpEkkXwIA</access-token>
+			<account-id>23411940</account-id>
+		</auth>
+
+		<!--
+			Enter the instrument tickers for which you want to download here
+			data from the stock exchange and then transferred to HFT,
+			here is an example:
+
+			<instrument ticker="EURUSD"/>
 		-->
 	</market>
 
