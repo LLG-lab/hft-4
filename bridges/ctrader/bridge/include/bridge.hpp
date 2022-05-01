@@ -45,6 +45,10 @@ public:
 
         ctrader_conn_.set_on_error_callback([this](const boost::system::error_code &ec)
             {
+                // FIXME: Tymczasowo nie będzie próby ponownego połączenia.
+                //        proces będzie po prostu zatrzymany. Parent process,
+                //        czyli HFT, będzie próbował go respawnować.
+                throw std::runtime_error("Connection to cTrader was lost – W/O: stopping the process");
                 ctrader_conn_.close();
                 ctrader_conn_.connect();
                 sm_.process_event(proxy_core::ctrader_connection_error_event(ec));

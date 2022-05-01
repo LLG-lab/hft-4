@@ -113,7 +113,7 @@ public:
 
     // Transition table for proxy_core.
     struct transition_table : mpl::vector<
-        //    Start                    Event                      Next                      Action                                         Guard
+        //    Start                    Event                                Next                      Action                                         Guard
         //  +-------------------------+-----------------------------------+-------------------------+--------------------------------------------+----------------------------------+
       a_row < wait_for_connect        , pc::hft_data_event                , wait_for_connect        , &pc::hft_data_event_broker_disconnected                                       >,
       a_row < wait_for_connect        , pc::ctrader_connection_event      , app_authorization       , &pc::start_app_authorization                                                  >,
