@@ -337,7 +337,7 @@ void marketplace_gateway_process::execute_process(bridge_process_info &bpi, bool
 void marketplace_gateway_process::process_exit_notify(int, const std::error_code &ec)
 {
     respawn_timer_.cancel();
-    respawn_timer_.expires_after(boost::asio::chrono::seconds(1));
+    respawn_timer_.expires_after(boost::asio::chrono::seconds(18));
     respawn_timer_.async_wait(
         [this](const boost::system::error_code &error)
         {
@@ -367,13 +367,13 @@ void marketplace_gateway_process::process_exit_notify(int, const std::error_code
                             bpi.respawn_attempts++;
                         }
 
-                        if (bpi.respawn_attempts < 10)
+                        if (bpi.respawn_attempts < 100)
                         {
                             bpi.last_respawn = now;
 
                             try
                             {
-                                execute_process(bpi, false);
+                                execute_process(bpi, true);
                             }
                             catch (const exception &e)
                             {
@@ -385,7 +385,7 @@ void marketplace_gateway_process::process_exit_notify(int, const std::error_code
                         }
                         else
                         {
-                            hft_log(ERROR) << "Will no try respawn process, tried 10 times. "
+                            hft_log(ERROR) << "Will no try respawn process, tried 100 times. "
                                            << "Bridge process " << bpi.label
                                            << " constatnly crashes.";
 
