@@ -348,6 +348,35 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
 
             break;
         }
+        case PROTO_OA_SYMBOL_BY_ID_RES:
+        {
+            ProtoOASymbolByIdRes res;
+            res.ParseFromString(payload);
+
+            for (int i = 0; i < res.symbol_size(); i++)
+            {
+                detailed_instrument_info dii;
+
+                int symbolid = res.symbol(i).symbolid();
+                dii.instrument_id_ = symbolid;
+                dii.step_volume_ = res.symbol(i).stepvolume() / 100;
+                dii.max_volume_  = res.symbol(i).maxvolume()  / 100;
+                dii.min_volume_  = res.symbol(i).minvolume()  / 100;
+
+                hft2ctrader_log(INFO) << "Instrument: "
+                                      << id2ticker_[symbolid]
+                                      << ", min_volume: "
+                                      << dii.min_volume_
+                                      << ", max_volume: "
+                                      << dii.max_volume_
+                                      << ", step_volume: "
+                                      << dii.step_volume_;
+
+                instrument_info_[symbolid] = dii;
+            }
+
+            break;
+        }
         case PROTO_OA_TRADER_UPDATE_EVENT:
         {
             ProtoOATraderUpdatedEvent evt;
@@ -1085,9 +1114,35 @@ bool proxy_core::ctrader_subscribe_instruments_ex(const instruments_container &i
     return status;
 }
 
+bool proxy_core::ctrader_instruments_information_ex(const instruments_container &instruments)
+{
+    instrument_id_container aux;
+    bool status = true;
+
+    for (auto &instr : instruments)
+    {
+        auto x = ticker2id_.find(instr);
+
+        if (x == ticker2id_.end())
+        {
+            hft2ctrader_log(ERROR) << "ctrader_instruments_information_ex: Unsupported instrument ‘"
+                                   << instr << "’";
+
+            status = false;
+        }
+        else
+        {
+            aux.push_back(x -> second);
+        }
+    }
+
+    ctrader_instruments_information(aux, config_.get_auth_account_id());
+
+    return status;
+}
+
 bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume)
 {
-    bool status = true;
     int instrument_id = 0;
     auto x = ticker2id_.find(instrument);
 
@@ -1096,16 +1151,47 @@ bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, c
         hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Unsupported instrument ‘"
                                << instrument << "’";
 
-        status = false;
+        return false;
     }
-    else
+
+    instrument_id = x -> second;
+
+    auto y = instrument_info_.find(instrument_id);
+
+    if (y == instrument_info_.end())
     {
-        instrument_id = x -> second;
+        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Have no information details for instrument ‘"
+                               << instrument << "’";
 
-        ctrader_create_market_order(identifier, instrument_id, pt, volume * 100, config_.get_auth_account_id());
+        return false;
     }
 
-    return status;
+    volume /= instrument_info_[instrument_id].step_volume_;
+    volume *= instrument_info_[instrument_id].step_volume_;
+
+    if (volume < instrument_info_[instrument_id].min_volume_)
+    {
+        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume ‘"
+                               << volume << "’ is less than minimum required ‘"
+                               << instrument_info_[instrument_id].min_volume_
+                               << "’ for instrument ‘" << instrument << "’";
+
+        return false;
+    }
+
+    if (volume > instrument_info_[instrument_id].max_volume_)
+    {
+        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume ‘"
+                               << volume << "’ is more than maximum allowed ‘"
+                               << instrument_info_[instrument_id].max_volume_
+                               << "’ for instrument ‘" << instrument << "’";
+
+        return false;
+    }
+
+    ctrader_create_market_order(identifier, instrument_id, pt, volume * 100, config_.get_auth_account_id());
+
+    return true;
 }
 
 bool proxy_core::ctrader_close_position_ex(const std::string &identifier)

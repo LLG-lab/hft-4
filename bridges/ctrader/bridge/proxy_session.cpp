@@ -41,6 +41,11 @@ void proxy_session::on_init(void)
         hft2ctrader_log(FATAL) << "Unable to subscribe instruments – cannot proceed, this is fatal.";
     }
 
+    if (! ctrader_instruments_information_ex(config_.get_instruments()))
+    {
+        hft2ctrader_log(FATAL) << "Unable to obtain detailed instruments information – cannot proceed, this is fatal.";
+    }
+
     if (! hft_session_initialized_)
     {
         hft2ctrader_log(INFO)  << "Initialize HFT session, id ‘"

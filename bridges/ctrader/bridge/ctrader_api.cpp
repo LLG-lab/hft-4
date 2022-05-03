@@ -89,6 +89,23 @@ void ctrader_api::ctrader_subscribe_instruments(const instrument_id_container &d
     send_message(req.payloadtype(), payload);
 }
 
+void ctrader_api::ctrader_instruments_information(const instrument_id_container &data, int account_id)
+{
+    ProtoOASymbolByIdReq req;
+    std::string payload;
+
+    req.set_ctidtraderaccountid(account_id);
+
+    for (auto &id : data)
+    {
+        req.add_symbolid(id);
+    }
+
+    req.SerializeToString(&payload);
+
+    send_message(req.payloadtype(), payload);
+}
+
 void ctrader_api::ctrader_create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id)
 {
     ProtoOANewOrderReq req;

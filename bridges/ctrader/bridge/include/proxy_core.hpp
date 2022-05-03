@@ -159,6 +159,7 @@ protected:
     double get_free_margin(void); //const;
 
     bool ctrader_subscribe_instruments_ex(const instruments_container &instruments);
+    bool ctrader_instruments_information_ex(const instruments_container &instruments);
     bool ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume);
     bool ctrader_close_position_ex(const std::string &identifier);
 
@@ -190,6 +191,7 @@ private:
     std::map<std::string, int> ticker2id_;
     std::map<int, std::string> id2ticker_;
     std::map<int, tick_type>   instruments_tick_;
+    std::map<int, detailed_instrument_info> instrument_info_;
 
     double account_balance_;
     std::string broker_;

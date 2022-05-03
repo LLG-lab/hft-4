@@ -50,6 +50,7 @@ public:
     void ctrader_account_information(int account_id);
     void ctrader_available_instruments(int account_id);
     void ctrader_subscribe_instruments(const instrument_id_container &data, int account_id);
+    void ctrader_instruments_information(const instrument_id_container &data, int account_id);
     void ctrader_create_market_order(const std::string &identifier, int instrument_id, position_type pt, int volume, int account_id);
     void ctrader_close_position(int position_id, int volume, int account_id);
     void ctrader_opened_positions_list(int account_id);
