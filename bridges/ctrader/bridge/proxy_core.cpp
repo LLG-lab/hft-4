@@ -315,9 +315,11 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
         case PROTO_OA_ACCOUNT_DISCONNECT_EVENT:
         {
             // FIXME: Do ogarnięcia.
-            hft2ctrader_log(ERROR) << "Received PROTO_OA_ACCOUNT_DISCONNECT_EVENT – "
+            hft2ctrader_log(FATAL) << "Received PROTO_OA_ACCOUNT_DISCONNECT_EVENT – "
                                    << "established session for an account is dropped"
                                    << " on the server side.";
+
+            ::exit(0);
 
             break;
         }
@@ -339,6 +341,8 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
                                        << "application is cancelled by "
                                        << "the server with no explanation.";
             }
+
+            ::exit(0);
 
             break;
         }
