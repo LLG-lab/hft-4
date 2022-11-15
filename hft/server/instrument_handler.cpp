@@ -176,6 +176,52 @@ std::string instrument_handler::json_get_string_attribute(const boost::json::obj
     return std::string(attr_v.get_string().c_str());
 }
 
+std::vector<int> instrument_handler::json_get_int_array_attribute(const boost::json::object &obj,
+                                                                      const std::string &attr_name)
+{
+    using namespace boost::json;
+
+    if (! obj.contains(attr_name))
+    {
+        std::string error_msg = std::string("Missing attribute ‘")
+                                + attr_name + std::string("’");
+
+        throw std::runtime_error(error_msg);
+    }
+
+    value const &attr_v = obj.at(attr_name);
+
+    if (attr_v.kind() != kind::array)
+    {
+        std::string error_msg = std::string("Invalid attribute type for ‘")
+                                + attr_name + std::string("’ - array type expected");
+
+        throw std::runtime_error(error_msg);
+    }
+
+    array const &arr = attr_v.get_array();
+
+    std::vector<int> ret;
+
+    for (auto it = arr.begin(); it != arr.end(); it++)
+    {
+        value const &array_val = *it;
+
+        if (array_val.kind() != kind::int64)
+        {
+            std::string error_msg = std::string("Invalid item type of array attribute ‘")
+                                    + attr_name + std::string("’ - integer type expected");
+
+            throw std::runtime_error(error_msg);
+
+        }
+
+        ret.push_back(array_val.get_int64());
+    }
+
+    return ret;
+}
+
 const boost::json::object &instrument_handler::json_get_object_attribute(const boost::json::object &obj, const std::string &attr_name)
 {
     using namespace boost::json;

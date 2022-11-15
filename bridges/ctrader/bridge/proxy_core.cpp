@@ -367,14 +367,14 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
                 dii.max_volume_  = res.symbol(i).maxvolume()  / 100;
                 dii.min_volume_  = res.symbol(i).minvolume()  / 100;
 
-                hft2ctrader_log(INFO) << "Instrument: "
-                                      << id2ticker_[symbolid]
-                                      << ", min_volume: "
-                                      << dii.min_volume_
-                                      << ", max_volume: "
-                                      << dii.max_volume_
-                                      << ", step_volume: "
-                                      << dii.step_volume_;
+                hft2ctrader_log(TRACE) << "Instrument: "
+                                       << id2ticker_[symbolid]
+                                       << ", min_volume: "
+                                       << dii.min_volume_
+                                       << ", max_volume: "
+                                       << dii.max_volume_
+                                       << ", step_volume: "
+                                       << dii.step_volume_;
 
                 instrument_info_[symbolid] = dii;
             }

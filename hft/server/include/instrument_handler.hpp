@@ -88,6 +88,7 @@ protected:
     static double json_get_double_attribute(const boost::json::object &obj, const std::string &attr_name);
     static int json_get_int_attribute(const boost::json::object &obj, const std::string &attr_name);
     static std::string json_get_string_attribute(const boost::json::object &obj, const std::string &attr_name);
+    static std::vector<int> json_get_int_array_attribute(const boost::json::object &obj, const std::string &attr_name);
     static const boost::json::object &json_get_object_attribute(const boost::json::object &obj, const std::string &attr_name);
 
     //
