@@ -35,6 +35,10 @@ pushd instrument-handlers/smart_martingale
 scl enable devtoolset-7 "cmake . -DCMAKE_BUILD_TYPE:STRING=Release"
 scl enable devtoolset-7 make
 popd
+pushd instrument-handlers/simple_tracker
+scl enable devtoolset-7 "cmake . -DCMAKE_BUILD_TYPE:STRING=Release"
+scl enable devtoolset-7 make
+popd
 pushd bridges/dukascopy
 cat pom.xml.in | sed "s/@HFTVERSION@/$(< ../../version)/g" > pom.xml
 mvn clean install
@@ -127,6 +131,7 @@ mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/dukascopy
 mkdir -p $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/ctrader
 # Install instrument handlers
 install -m 755 -p instrument-handlers/smart_martingale/libsmart_martingale.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
+install -m 755 -p instrument-handlers/simple_tracker/libsimple_tracker.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
 # Install Dukascopy bridge
 install -m 644 -p bridges/dukascopy/target/hft-bridge-$(< version).jar $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/dukascopy/hft-bridge-$(< version).jar
 find /root/.m2/repository/ -name "*.jar" | while read line ; do install -m 644 -p  "$line" $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/dukascopy/ ; done

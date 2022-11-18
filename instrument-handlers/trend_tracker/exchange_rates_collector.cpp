@@ -217,8 +217,11 @@ params exchange_rates_collector::calculate_params(interval_t interval, int depth
     // Calculate delta parameter.
     //
 
+
     x = 0;
     double delta = 0.0;
+/*
+XXX Temporary ignoring delta.
 
     for (int i = findex; i < store.size(); i++)
     {
@@ -227,6 +230,8 @@ params exchange_rates_collector::calculate_params(interval_t interval, int depth
     }
 
     delta = sqrt((1.0 / depth) * delta);
+*/
+    delta = 1.0;
 
     return params(a, delta);
 }

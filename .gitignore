@@ -43,3 +43,10 @@ instrument-handlers/trend_tracker/libtrend_tracker.so.*
 instrument-handlers/trend_tracker/libtrend_tracker.so
 instrument-handlers/trend_tracker/Makefile
 instrument-handlers/trend_tracker/CMakeFiles
+instrument-handlers/simple_tracker/CMakeCache.txt
+instrument-handlers/simple_tracker/cmake_install.cmake
+instrument-handlers/simple_tracker/install_manifest.txt
+instrument-handlers/simple_tracker/libsimple_tracker.so.*
+instrument-handlers/simple_tracker/libsimple_tracker.so
+instrument-handlers/simple_tracker/Makefile
+instrument-handlers/simple_tracker/CMakeFiles

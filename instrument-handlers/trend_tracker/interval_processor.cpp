@@ -5,6 +5,10 @@
 #define hft_log(__X__) \
     CLOG(__X__, logger_id_.c_str())
 
+namespace {
+    const int min_probe = 1000;
+}
+
 interval_processor::interval_processor(exchange_rates_collector &erc, invalidable *host_obj,
                                            interval_t interval, int depth, int pips_limit,
                                                const std::string &logger_id, const std::string &work_dir,
@@ -109,7 +113,7 @@ investment_advice_ext interval_processor::process(void)
         return result;
     }
 
-    if (long_games_.size() >= 100)
+    if (long_games_.size() >= min_probe)
     {
         for (auto &g : long_games_)
         {
@@ -120,7 +124,7 @@ investment_advice_ext interval_processor::process(void)
         long_interest = estimate_probability(p, long_games_, max_a, max_delta);
     }
 
-    if (short_games_.size() >= 100)
+    if (short_games_.size() >= min_probe)
     {
         for (auto &g : short_games_)
         {
@@ -169,15 +173,15 @@ double interval_processor::estimate_probability(const params &p, const std::vect
             }
         }
 
-        if (n == 100)
+        if (n == min_probe)
         {
             break;
         }
-        else if (n > 100)
+        else if (n > min_probe)
         {
             max_radius = radius;
         }
-        else if (n < 100)
+        else if (n < min_probe)
         {
             min_radius = radius;
         }
