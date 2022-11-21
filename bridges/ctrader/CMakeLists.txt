@@ -51,6 +51,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/bridge/include/hft_connection.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/proxy_session.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/bridge.hpp
+     ${PROJECT_SOURCE_DIR}/historical-data-feed/include/historical_data_feed.hpp
 )
 
 #
@@ -69,7 +70,8 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/bridge/proxy_core.cpp
      ${PROJECT_SOURCE_DIR}/bridge/hft_connection.cpp
      ${PROJECT_SOURCE_DIR}/bridge/proxy_session.cpp
-     ${PROJECT_SOURCE_DIR}/history-ticks/history_ticks_main.cpp
+     ${PROJECT_SOURCE_DIR}/historical-data-feed/historical_data_feed_main.cpp
+     ${PROJECT_SOURCE_DIR}/historical-data-feed/historical_data_feed.cpp
      ${PROJECT_SOURCE_DIR}/../../3rd-party/easylogging++/easylogging++.cc
 )
 
@@ -143,6 +145,7 @@ target_link_libraries(hft2ctrader "${BOOST_LIBS_PATH}/libboost_program_options.a
 
 include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/bridge/include")
+include_directories("${PROJECT_SOURCE_DIR}/historical-data-feed/include")
 include_directories("${PROJECT_SOURCE_DIR}/../../3rd-party")
 include_directories("${PROJECT_SOURCE_DIR}/../../3rd-party/boost")
 include_directories("${PROJECT_SOURCE_DIR}/../../3rd-party/easylogging++")

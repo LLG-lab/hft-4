@@ -31,6 +31,12 @@ enum class position_type
     SHORT_POSITION
 };
 
+enum class quote_type
+{
+    BID = 1,
+    ASK = 2
+};
+
 typedef std::vector<std::string> instruments_container;
 
 typedef struct _tick_type

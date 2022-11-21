@@ -171,6 +171,31 @@ void ctrader_api::ctrader_opened_positions_list(int account_id)
     send_message(req.payloadtype(), payload);
 }
 
+void ctrader_api::ctrader_historical_tick_data(int instrument_id, quote_type quote, unsigned long from_timestamp, unsigned long to_timestamp, int account_id)
+{
+    ProtoOAGetTickDataReq req;
+    std::string payload;
+
+    req.set_ctidtraderaccountid(account_id);
+    req.set_symbolid(instrument_id);
+    req.set_fromtimestamp(from_timestamp);
+    req.set_totimestamp(to_timestamp);
+
+    switch (quote)
+    {
+        case quote_type::ASK:
+            req.set_type(ASK);
+            break;
+        case quote_type::BID:
+            req.set_type(BID);
+            break;
+    }
+
+    req.SerializeToString(&payload);
+
+    send_message(req.payloadtype(), payload);
+}
+
 //
 // Helper methods.
 //

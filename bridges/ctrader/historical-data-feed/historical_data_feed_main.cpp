@@ -21,31 +21,31 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/program_options.hpp>
 
-#include <hft2ctrader_config.hpp>
-#include <ctrader_ssl_connection.hpp>
-#include <ctrader_api.hpp>
+//#include <hft2ctrader_config.hpp>
+//#include <ctrader_ssl_connection.hpp>
+//#include <ctrader_api.hpp>
+#include <historical_data_feed.hpp>
 
 #include <easylogging++.h>
 
 namespace prog_opts = boost::program_options;
 
-static struct hft2ctrade_history_ticks_options_type
+static struct hft2ctrade_historical_data_feed_options_type
 {
     std::string config_file_name;
     std::string instrument;
-    int begin_week;
-    int end_week;
+    int week_number;
     std::string broker;
 
-} hft2ctrade_history_ticks_options;
+} hft2ctrade_historical_data_feed_options;
 
 #define hft2ctraderOption(__X__) \
-    hft2ctrade_history_ticks_options.__X__
+    hft2ctrade_historical_data_feed_options.__X__
 
 #define hft2ctrader_log(__X__) \
-    CLOG(__X__, "history_ticks")
+    CLOG(__X__, "historical_data_feed")
 
-int history_ticks_main(int argc, char *argv[])
+int historical_data_feed_main(int argc, char *argv[])
 {
 
     //
@@ -57,13 +57,12 @@ int history_ticks_main(int argc, char *argv[])
         ("history-ticks", "")
     ;
 
-    prog_opts::options_description desc("Options for history-ticks");
+    prog_opts::options_description desc("Options for historical-data-feed");
     desc.add_options()
         ("help,h", "Produce help message")
         ("config,c", prog_opts::value<std::string>(&hft2ctraderOption(config_file_name) ) -> default_value("/etc/hft/hft-config.xml"), "Configuration file name")
         ("instrument,i", prog_opts::value<std::string>(&hft2ctraderOption(instrument) ), "Financial instrument ticker – must be supported by specified broker")
-        ("begin-week,B", prog_opts::value<int>(&hft2ctraderOption(begin_week) ), "Start week for which data is to be downloaded (inclusive)")
-        ("end-week,E", prog_opts::value<int>(&hft2ctraderOption(end_week) ), "End week for which data is to be downloaded (inclusive)")
+        ("week,w", prog_opts::value<int>(&hft2ctraderOption(week_number) ), "Number of the week for which the data will be downloaded")
         ("broker,b", prog_opts::value<std::string>(&hft2ctraderOption(broker)), "Broker being a market gateway")
     ;
 
@@ -93,8 +92,7 @@ int history_ticks_main(int argc, char *argv[])
     //
 
     cfg.set_instrument(hft2ctraderOption(instrument));
-    cfg.set_begin_week(hft2ctraderOption(begin_week));
-    cfg.set_end_week(hft2ctraderOption(end_week));
+    cfg.set_week_number(hft2ctraderOption(week_number));
 
     //
     // Define default configuration for all future bridge loggers.
@@ -111,7 +109,7 @@ int history_ticks_main(int argc, char *argv[])
     // Setup logging.
     //
 
-    el::Logger *logger = el::Loggers::getLogger("history_ticks", true);
+    el::Logger *logger = el::Loggers::getLogger("historical_data_feed", true);
 
     boost::asio::io_context ioctx;
 
@@ -124,10 +122,18 @@ int history_ticks_main(int argc, char *argv[])
 
     try
     {
-        ctrader_ssl_connection broker_connection {ioctx, cfg};
-        ctrader_api api { broker_connection };
+        historical_data_feed data_feed {ioctx, cfg};
 
-    // something.
+        ioctx.run();
+
+        if (data_feed.completed())
+        {
+            hft2ctrader_log(INFO) << "Completed.";
+        }
+        else
+        {
+            hft2ctrader_log(INFO) << "*** Interrupted.";
+        }
     }
     catch (const std::exception &e)
     {
@@ -136,8 +142,6 @@ int history_ticks_main(int argc, char *argv[])
 
         return 1;
     }
-
-    std::cout << "*** Completed.";
 
     return 0;
 }

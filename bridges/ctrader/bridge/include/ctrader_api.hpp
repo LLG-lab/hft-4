@@ -55,6 +55,7 @@ public:
     void ctrader_close_position(int position_id, int volume, int account_id);
     void ctrader_opened_positions_list(int account_id);
     void ctrader_order_list(unsigned long from_timestamp, unsigned long to_timestamp, int account_id);
+    void ctrader_historical_tick_data(int instrument_id, quote_type quote, unsigned long from_timestamp, unsigned long to_timestamp, int account_id);
 
 private:
 
