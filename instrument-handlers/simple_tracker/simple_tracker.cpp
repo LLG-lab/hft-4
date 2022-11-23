@@ -490,7 +490,7 @@ void simple_tracker::continue_short_position(int ask_pips, int bid_pips, hft::pr
 
     if (ask_pips - reference_price_pips >= max_pips_loss_)
     {
-        hft_log(WARNING) << "(SHORT) Reattempting close position ‘"
+        hft_log(WARNING) << "(SHORT) Going to close position ‘"
                          << hs_.get_string_var("position.id") << "’.";
 
          hs_.set_int_var("position.state", (int) state::TRY_CLOSE_SHORT);

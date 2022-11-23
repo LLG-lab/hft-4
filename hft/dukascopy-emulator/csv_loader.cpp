@@ -34,7 +34,8 @@ static const boost::xpressive::sregex header_regex2 = boost::xpressive::sregex::
 //     01.12.2017 00:00:00.192 GMT+0100
 //
 
-static const boost::xpressive::sregex datetime_regex = boost::xpressive::sregex::compile("^\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}(\\sGMT\\+\\d{4})?$");
+// static const boost::xpressive::sregex datetime_regex = boost::xpressive::sregex::compile("^\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}(\\sGMT\\+\\d{4})?$");
+static const boost::xpressive::sregex datetime_regex = boost::xpressive::sregex::compile("^\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2}\\.\\d$");
 
 csv_loader::csv_loader(const std::string &file_name)
 {
@@ -73,6 +74,8 @@ bool csv_loader::get_record(csv_loader::csv_record &out_rec)
     std::string line;
     boost::xpressive::smatch results;
 
+start_readline:
+
     do
     {
         if (! std::getline(infile_, line))
@@ -80,6 +83,11 @@ bool csv_loader::get_record(csv_loader::csv_record &out_rec)
             return false;
         }
     } while (boost::xpressive::regex_match(line, results, header_regex1) || boost::xpressive::regex_match(line, results, header_regex2));
+
+    if (line.length() == 0)
+    {
+        goto start_readline;
+    }
 
     boost::char_separator<char> sep(",\r", "", boost::drop_empty_tokens);
     tokenizer tokens(line, sep);
@@ -107,6 +115,8 @@ bool csv_loader::get_record(csv_loader::csv_record &out_rec)
     out_rec.bid = boost::lexical_cast<double>(columns[CSV_BID]);
     out_rec.ask_volume = boost::lexical_cast<double>(columns[CSV_ASK_VOLUME]);
     out_rec.bid_volume = boost::lexical_cast<double>(columns[CSV_BID_VOLUME]);
+/*
+ * FIXME: Do zastanowienia się.
 
     if (! boost::xpressive::regex_match(columns[CSV_DATE], results, datetime_regex))
     {
@@ -118,7 +128,7 @@ bool csv_loader::get_record(csv_loader::csv_record &out_rec)
 
         throw csv_exception(error_msg.str());
     }
-
+*/
     boost::char_separator<char> datetime_sep(" .:", "", boost::drop_empty_tokens);
     tokenizer datetime_tokens(columns[CSV_DATE], datetime_sep);
     std::vector<std::string> datetime_items;

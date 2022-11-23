@@ -539,5 +539,19 @@ std::string historical_data_feed::timestamp2string(unsigned long millis)
     ts = *gmtime(&rawtime);
     strftime(buf, sizeof(buf), "%d.%m.%Y %H:%M:%S", &ts);
 
-    return std::string(buf) + std::string(".") + std::to_string(fraction);
+    std::string result = std::string(buf) + std::string(".");
+
+    if (fraction < 100)
+    {
+        result += "0";
+    }
+
+    if (fraction < 10)
+    {
+        result += "0";
+    }
+
+    result += std::to_string(fraction);
+
+    return result;
 }

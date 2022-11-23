@@ -36,6 +36,7 @@ static struct dukas_emulator_options_type
     std::string config_file_name;
     int bankroll;
     bool check_bankruptcy;
+    bool invert_hft_decision;
 
 } dukas_emulator_options;
 
@@ -134,6 +135,7 @@ int hft_dukasemu_main(int argc, char *argv[])
         ("sessid,s", prog_opts::value<std::string>(&hftOption(sessid)) -> default_value("dukascopy-emulator"), "Session ID")
         ("bankroll,b", prog_opts::value<int>(&hftOption(bankroll)) -> default_value(10000), "Initial virtual deposit")
         ("check-bankruptcy,B", prog_opts::value<bool>(&hftOption(check_bankruptcy)) -> default_value(false), "Stop simulation when equity drops to zero")
+        ("invert-hft-decision,I", prog_opts::value<bool>(&hftOption(invert_hft_decision)) -> default_value(false), "Play the opposite of the HFT decision")
         ("config,c", prog_opts::value<std::string>(&hftOption(config_file_name)) -> default_value("/etc/hft/hft-config.xml"), "HFT configuration file name")
     ;
 
@@ -178,7 +180,8 @@ int hft_dukasemu_main(int argc, char *argv[])
                                           mk_instrument_info_map(hftOption(instruments)),
                                           hftOption(bankroll),
                                           hftOption(config_file_name),
-                                          hftOption(check_bankruptcy));
+                                          hftOption(check_bankruptcy),
+                                          hftOption(invert_hft_decision));
 
         hft_display_filter hdf;
         hdf.display(simulation.get_result());

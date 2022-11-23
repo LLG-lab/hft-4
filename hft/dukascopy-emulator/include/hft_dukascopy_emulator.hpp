@@ -69,7 +69,7 @@ public:
 
     hft_dukascopy_emulator(const std::string &host, const std::string &port, const std::string &sessid,
                                const std::map<std::string, std::string> &instrument_data, double deposit,
-                                    const std::string &config_file_name, bool check_bankruptcy);
+                                    const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision);
 
     const emulation_result &get_result(void) const { return emulation_result_; }
 
@@ -153,6 +153,7 @@ private:
 
     double equity_;
     bool check_bankruptcy_;
+    bool invert_hft_decision_;
 
     instruments_info instruments_;
 };

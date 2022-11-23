@@ -28,6 +28,9 @@ void session_transport::handle_read(const boost::system::error_code &error)
 {
     if (! error)
     {
+/*
+FIXME: Unused anymore.
+* 
         //
         // Update information about time when the
         // request arrived.
@@ -37,7 +40,7 @@ void session_transport::handle_read(const boost::system::error_code &error)
         struct tm *now = localtime(&t);
 
         request_time_ = boost::posix_time::time_duration(now -> tm_hour, now -> tm_min, now -> tm_sec, 0);
-
+*/
         //
         // Extract the newline-delimited message from the buffer.
         //

@@ -18,10 +18,11 @@
 
 hft_dukascopy_emulator::hft_dukascopy_emulator(const std::string &host, const std::string &port, const std::string &sessid,
                                                    const std::map<std::string, std::string> &instrument_data, double deposit,
-                                                       const std::string &config_file_name, bool check_bankruptcy)
+                                                       const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision)
     : hft_connection_(host, port),
       equity_(deposit),
-      check_bankruptcy_(check_bankruptcy)
+      check_bankruptcy_(check_bankruptcy),
+      invert_hft_decision_(invert_hft_decision)
 {
     std::vector<std::string> instruments;
 
@@ -240,20 +241,36 @@ void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response:
 
     opened_position op;
     op.instrument = tick_info.instrument;
-    op.direction  = opi.pd_;
     op.id         = opi.id_;
     op.qty        = opi.qty_;
     op.open_time  = boost::posix_time::ptime(boost::posix_time::time_from_string(tick_info.request_time));
 
+    if (invert_hft_decision_)
+    {
+        if (opi.pd_ == hft::protocol::response::position_direction::POSITION_LONG)
+        {
+            op.direction = hft::protocol::response::position_direction::POSITION_SHORT;
+        }
+        else if (opi.pd_ == hft::protocol::response::position_direction::POSITION_SHORT)
+        {
+            op.direction = hft::protocol::response::position_direction::POSITION_LONG;
+        }
+    }
+    else
+    {
+        op.direction  = opi.pd_;
+    }
+
+
     if (op.direction == hft::protocol::response::position_direction::POSITION_LONG)
     {
         op.open_price_pips = floating2pips(op.instrument, tick_info.ask);
-        price = tick_info.ask;
+        price = invert_hft_decision_ ? tick_info.bid : tick_info.ask;
     }
     else if (op.direction == hft::protocol::response::position_direction::POSITION_SHORT)
     {
         op.open_price_pips = floating2pips(op.instrument, tick_info.bid);
-        price = tick_info.bid;
+        price = invert_hft_decision_ ? tick_info.ask : tick_info.bid;
     }
     else
     {
