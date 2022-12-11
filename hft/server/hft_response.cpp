@@ -292,12 +292,20 @@ void response::unserialize(const std::string &payload)
 
             value const &qty_v = operation_obj.at("qty");
 
-            if (qty_v.kind() != kind::int64)
+            double qty;
+
+            if (qty_v.kind() == kind::int64)
+            {
+                qty = qty_v.get_int64();
+            }
+            else if (qty_v.kind() == kind::double_)
+            {
+                qty = qty_v.get_double();
+            }
+            else
             {
                 throw response::violation_error("Invalid qty type in operation object");
             }
-
-            int qty = qty_v.get_int64();
 
             new_positions_.emplace_back(pd, id, qty);
         }

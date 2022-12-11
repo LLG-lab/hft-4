@@ -38,12 +38,12 @@ public:
 
     struct open_position_info
     {
-        open_position_info(position_direction pd, const std::string &id, int qty)
+        open_position_info(position_direction pd, const std::string &id, double qty)
             : pd_(pd), id_(id), qty_(qty) {}
 
         position_direction pd_;
         std::string id_;
-        int qty_;
+        double qty_;
     };
 
     response(void)
@@ -63,8 +63,8 @@ public:
 
     void error(const std::string &message) { error_message_ = message; }
     void close_position(const std::string &id) { close_positions_.push_back(id); }
-    void open_long(const std::string &id, int qty) { new_positions_.emplace_back(position_direction::POSITION_LONG, id, qty); }
-    void open_short(const std::string &id, int qty) { new_positions_.emplace_back(position_direction::POSITION_SHORT, id, qty); }
+    void open_long(const std::string &id, double qty) { new_positions_.emplace_back(position_direction::POSITION_LONG, id, qty); }
+    void open_short(const std::string &id, double qty) { new_positions_.emplace_back(position_direction::POSITION_SHORT, id, qty); }
 
     //
     // Methods used by client.

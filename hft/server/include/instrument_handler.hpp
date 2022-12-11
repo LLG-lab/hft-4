@@ -96,6 +96,8 @@ protected:
     //
 
     void sms_alert(const std::string &message);
+    std::string file_get_contents(const std::string &filename);
+    void file_put_contents(const std::string &filename, const std::string &content);
 
     //
     //  Handler state keeper.

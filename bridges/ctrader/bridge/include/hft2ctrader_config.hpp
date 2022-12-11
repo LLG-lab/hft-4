@@ -38,7 +38,7 @@ public:
     hft2ctrader_config(const std::string &config_file_name, const std::string &broker)
         : broker_ {broker}, auth_account_id_ {0}, account_ {account_type::UNDEFINED},
           hft_host_ {"127.0.0.1"}, hft_port_ {8137},
-          instrument_ {}, week_number_ {0}
+          instrument_ {}, week_number_ {0}, crypto_mode_ {false}
     { xml_parse(config_file_name); }
 
     ~hft2ctrader_config(void) = default;
@@ -53,6 +53,7 @@ public:
     // For history-ticks.
     void set_instrument(const std::string &instrument) { instrument_ = instrument; }
     void set_week_number(int week) { week_number_ = week; }
+    void set_crypto_mode(bool mode) { crypto_mode_ = mode; }
 
     //
     // Getters.
@@ -72,6 +73,7 @@ public:
     std::vector<std::string> get_instruments(void) const { return instruments_; }
     std::string get_instrument(void) const { return instrument_; }
     int get_week_number(void) const { return week_number_; }
+    bool is_crypto_mode(void) const { return crypto_mode_; }
 
 private:
 
@@ -106,6 +108,7 @@ private:
 
     std::string instrument_;
     int week_number_;
+    bool crypto_mode_;
 };
 
 #endif /* __HFT2CTRADER_CONFIG_HPP__ */

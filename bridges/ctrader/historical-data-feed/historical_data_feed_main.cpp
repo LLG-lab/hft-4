@@ -36,6 +36,7 @@ static struct hft2ctrade_historical_data_feed_options_type
     std::string instrument;
     int week_number;
     std::string broker;
+    bool crypto_currency;
 
 } hft2ctrade_historical_data_feed_options;
 
@@ -64,6 +65,7 @@ int historical_data_feed_main(int argc, char *argv[])
         ("instrument,i", prog_opts::value<std::string>(&hft2ctraderOption(instrument) ), "Financial instrument ticker – must be supported by specified broker")
         ("week,w", prog_opts::value<int>(&hft2ctraderOption(week_number) ), "Number of the week for which the data will be downloaded")
         ("broker,b", prog_opts::value<std::string>(&hft2ctraderOption(broker)), "Broker being a market gateway")
+        ("crypto,C", "Specify if instrument is a cryptocurrency. Saturday and Sunday days will be included to the trading week")
     ;
 
     prog_opts::options_description cmdline_options;
@@ -85,6 +87,15 @@ int historical_data_feed_main(int argc, char *argv[])
         return 0;
     }
 
+    if (vm.count("crypto"))
+    {
+        hft2ctraderOption(crypto_currency) = true;
+    }
+    else
+    {
+        hft2ctraderOption(crypto_currency) = false;
+    }
+
     hft2ctrader_config cfg { hft2ctraderOption(config_file_name), hft2ctraderOption(broker) };
 
     //
@@ -93,6 +104,7 @@ int historical_data_feed_main(int argc, char *argv[])
 
     cfg.set_instrument(hft2ctraderOption(instrument));
     cfg.set_week_number(hft2ctraderOption(week_number));
+    cfg.set_crypto_mode(hft2ctraderOption(crypto_currency));
 
     //
     // Define default configuration for all future bridge loggers.

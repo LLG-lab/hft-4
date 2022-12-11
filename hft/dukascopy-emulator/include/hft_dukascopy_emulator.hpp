@@ -42,7 +42,7 @@ public:
         std::string instrument;
         hft::protocol::response::position_direction direction;
         int pips_yield;
-        int qty;
+        double qty;
         boost::posix_time::ptime open_time;
         boost::posix_time::ptime close_time;
         double equity;
@@ -81,7 +81,7 @@ private:
         hft::protocol::response::position_direction direction;
         std::string id;
         int open_price_pips;
-        int qty;
+        double qty;
         boost::posix_time::ptime open_time;
     };
 

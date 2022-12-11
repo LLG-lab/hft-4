@@ -124,6 +124,7 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_server_connector.cpp
      ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_dukascopy_emulator.cpp
      ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_display_filter.cpp
+     ${PROJECT_SOURCE_DIR}/instrument-stats/hft_instrument_stats.cpp
      ${PROJECT_SOURCE_DIR}/../3rd-party/easylogging++/easylogging++.cc
 )
 

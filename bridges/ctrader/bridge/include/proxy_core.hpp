@@ -160,7 +160,7 @@ protected:
 
     bool ctrader_subscribe_instruments_ex(const instruments_container &instruments);
     bool ctrader_instruments_information_ex(const instruments_container &instruments);
-    bool ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume);
+    bool ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, double volume);
     bool ctrader_close_position_ex(const std::string &identifier);
 
     //

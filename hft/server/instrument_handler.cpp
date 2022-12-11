@@ -256,6 +256,20 @@ void instrument_handler::sms_alert(const std::string &message)
     sms::alert(message);
 }
 
+std::string instrument_handler::file_get_contents(const std::string &filename)
+{
+    std::string full_path = get_work_dir() + std::string("/") + filename;
+
+    return hft::utils::file_get_contents(full_path);
+}
+
+void instrument_handler::file_put_contents(const std::string &filename, const std::string &content)
+{
+    std::string full_path = get_work_dir() + std::string("/") + filename;
+
+    hft::utils::file_put_contents(full_path, content);
+}
+
 //
 // Plugin support.
 //

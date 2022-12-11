@@ -363,17 +363,17 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
 
                 int symbolid = res.symbol(i).symbolid();
                 dii.instrument_id_ = symbolid;
-                dii.step_volume_ = res.symbol(i).stepvolume() / 100;
-                dii.max_volume_  = res.symbol(i).maxvolume()  / 100;
-                dii.min_volume_  = res.symbol(i).minvolume()  / 100;
+                dii.step_volume_ = res.symbol(i).stepvolume();
+                dii.max_volume_  = res.symbol(i).maxvolume();
+                dii.min_volume_  = res.symbol(i).minvolume();
 
                 hft2ctrader_log(TRACE) << "Instrument: "
                                        << id2ticker_[symbolid]
-                                       << ", min_volume: "
+                                       << ", min_volume (in cents): "
                                        << dii.min_volume_
-                                       << ", max_volume: "
+                                       << ", max_volume (in cents): "
                                        << dii.max_volume_
-                                       << ", step_volume: "
+                                       << ", step_volume(in cents): "
                                        << dii.step_volume_;
 
                 instrument_info_[symbolid] = dii;
@@ -1145,7 +1145,7 @@ bool proxy_core::ctrader_instruments_information_ex(const instruments_container 
     return status;
 }
 
-bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, int volume)
+bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, const std::string &instrument, position_type pt, double volume)
 {
     int instrument_id = 0;
     auto x = ticker2id_.find(instrument);
@@ -1170,30 +1170,31 @@ bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, c
         return false;
     }
 
-    volume /= instrument_info_[instrument_id].step_volume_;
-    volume *= instrument_info_[instrument_id].step_volume_;
+    int int_voulume_in_cents = 100.0 * volume;
+    int_voulume_in_cents /= instrument_info_[instrument_id].step_volume_;
+    int_voulume_in_cents *= instrument_info_[instrument_id].step_volume_;
 
-    if (volume < instrument_info_[instrument_id].min_volume_)
+    if (int_voulume_in_cents < instrument_info_[instrument_id].min_volume_)
     {
-        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume ‘"
-                               << volume << "’ is less than minimum required ‘"
+        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume (in cents) ‘"
+                               << int_voulume_in_cents << "’ is less than minimum required (in cents)‘"
                                << instrument_info_[instrument_id].min_volume_
                                << "’ for instrument ‘" << instrument << "’";
 
         return false;
     }
 
-    if (volume > instrument_info_[instrument_id].max_volume_)
+    if (int_voulume_in_cents > instrument_info_[instrument_id].max_volume_)
     {
-        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume ‘"
-                               << volume << "’ is more than maximum allowed ‘"
+        hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume (in cents) ‘"
+                               << int_voulume_in_cents << "’ is more than maximum allowed (in cents) ‘"
                                << instrument_info_[instrument_id].max_volume_
                                << "’ for instrument ‘" << instrument << "’";
 
         return false;
     }
 
-    ctrader_create_market_order(identifier, instrument_id, pt, volume * 100, config_.get_auth_account_id());
+    ctrader_create_market_order(identifier, instrument_id, pt, int_voulume_in_cents, config_.get_auth_account_id());
 
     return true;
 }

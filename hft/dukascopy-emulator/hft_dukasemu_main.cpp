@@ -118,7 +118,7 @@ int hft_dukasemu_main(int argc, char *argv[])
     START_EASYLOGGINGPP(argc, argv);
 
     //
-    // Parsing options for fxemulator.
+    // Parsing options for emulator.
     //
 
     prog_opts::options_description hidden("Hidden options");

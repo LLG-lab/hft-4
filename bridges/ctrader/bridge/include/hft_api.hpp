@@ -57,13 +57,13 @@ public:
 
         struct pos_open_advice_info
         {
-            pos_open_advice_info(position_type d, const std::string &i, int v)
+            pos_open_advice_info(position_type d, const std::string &i, double v)
                 : direction {d}, identifier {i}, volume {v}
             {}
 
             position_type direction;
             std::string identifier;
-            int volume;
+            double volume;
         };
 
         typedef std::list<pos_open_advice_info> pos_open_advice_info_container;

@@ -27,20 +27,20 @@ public:
     hft_instrument_property(const std::string &instrument, const std::string &config_file_name);
     ~hft_instrument_property(void) = default;
 
-	char   get_pip_significant_digit(void) const { return pip_significant_digit_; }
-	double get_pip_value_per_contract(void) const { return pip_value_per_contract_; }
-	double get_long_dayswap_per_contract(void) const { return long_dayswap_per_contract_; }
-	double get_short_dayswap_per_contract(void) const { return short_dayswap_per_contract_; }
-	double get_commision_per_contract(void) const { return commision_per_contract_; }
+    char   get_pip_significant_digit(void) const { return pip_significant_digit_; }
+    double get_pip_value_per_contract(void) const { return pip_value_per_contract_; }
+    double get_long_dayswap_per_contract(void) const { return long_dayswap_per_contract_; }
+    double get_short_dayswap_per_contract(void) const { return short_dayswap_per_contract_; }
+    double get_commision_per_contract(void) const { return commision_per_contract_; }
     double get_margin_required_per_contract(void) const { return margin_required_per_contract_; }
 
 private:
 
-	char   pip_significant_digit_;
-	double pip_value_per_contract_;
-	double long_dayswap_per_contract_;
-	double short_dayswap_per_contract_;
-	double commision_per_contract_;
+    char   pip_significant_digit_;
+    double pip_value_per_contract_;
+    double long_dayswap_per_contract_;
+    double short_dayswap_per_contract_;
+    double commision_per_contract_;
     double margin_required_per_contract_;
 
 };

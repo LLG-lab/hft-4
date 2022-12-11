@@ -295,7 +295,7 @@ double hft_dukascopy_emulator::get_equity_at_moment(void) const
 
         int days = days_elapsed(open_time, now_time);
 
-        int qty = pos.second.qty;
+        double qty = pos.second.qty;
 
         double total_swaps = 0.0;
         int pips_yield = 0;
@@ -329,7 +329,7 @@ double hft_dukascopy_emulator::get_free_margin_at_moment(double equity_at_moment
 
     for (auto &pos : positions_)
     {
-        int qty = pos.second.qty;
+        double qty = pos.second.qty;
         used_margin += instruments_.at(pos.second.instrument) -> property.get_margin_required_per_contract() * qty;
     }
 

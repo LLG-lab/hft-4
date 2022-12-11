@@ -108,9 +108,11 @@ historical_data_feed::historical_data_feed(boost::asio::io_context &ioctx, const
     // Create chunks for requested week number.
     //
 
-    for (int day = 1; day <= 60; day++)
+    const int max_num_intervals = config_.is_crypto_mode() ? 84 : 60;
+
+    for (int num_intervals = 1; num_intervals <= max_num_intervals; num_intervals++)
     {
-        di_.chunks_info.push_back(make_chunk_info(config_.get_week_number(), day));
+        di_.chunks_info.push_back(make_chunk_info(config_.get_week_number(), num_intervals));
     }
 
     broker_connection_.connect();
@@ -477,7 +479,7 @@ void historical_data_feed::create_csv(void)
         }
         else
         {
-            if (valid_ask && valid_bid)
+            if (valid_ask && valid_bid && (ask > bid))
             {
                 output << make_csv_entry_str(timestamp, ask, bid) << "\r\n";
             }

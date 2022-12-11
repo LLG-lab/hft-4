@@ -54,7 +54,7 @@ void hft_server_connector::init(const std::string &sessid, const std::vector<std
     payload << "{\"method\":\"init\",\"sessid\":\""
             << sessid << "\",\"instruments\":["
             << instruments_str << "]}\n";
-    
+
     hft::protocol::response rsp;
     rsp.unserialize(send_recv_server(payload.str()));
 

@@ -364,12 +364,19 @@ void hft_api::hft_response::unserialize(const std::string &payload)
 
             value const &qty_v = operation_obj.at("qty");
 
-            if (qty_v.kind() != kind::int64)
+            double qty;
+            if (qty_v.kind() == kind::int64)
+            {
+                qty = qty_v.get_int64();
+            }
+            else if (qty_v.kind() == kind::double_)
+            {
+                qty = qty_v.get_double();
+            }
+            else
             {
                 throw std::invalid_argument("Invalid qty type in operation object");
             }
-
-            int qty = qty_v.get_int64();
 
             new_positions_info_.emplace_back(pd, id, qty);
         }
