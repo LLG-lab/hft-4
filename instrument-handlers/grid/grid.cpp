@@ -363,7 +363,18 @@ void grid::load_grid(void)
         return;
     }
 
-    std::string json_data = file_get_contents("grid.json");
+    std::string json_data;
+
+    try
+    {
+        json_data = file_get_contents("grid.json");
+    }
+    catch (const std::runtime_error &e)
+    {
+        hft_log(WARNING) << "load grid:: Unalbe to load file ‘grid.json’";
+
+        return;
+    }
 
     value jv;
 

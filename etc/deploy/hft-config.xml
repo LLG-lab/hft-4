@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hft>
+	<server>
+		<!--
+		Available logging severities:
+			FATAL
+			ERROR
+			WARNING
+			INFO
+			TRACE
+			DEBUG
+		-->
+		<logging severity="INFO"/>
+
+		<sms-alerts active="false" sandbox="false">
+			<!--
+			 Login and password for SMS gateway.
+			 You must have account in service
+			 gsmservice.pl
+			-->
+			<auth>
+				<login>YOURLOGIN</login>
+				<password>YOURPASSWORD</password>
+			</auth>
+
+			<!--
+			 Recipient is a phone number.
+			 Multiple recipiens are available.
+			-->
+			<recipient>000000000</recipient>
+		</sms-alerts>
+	</server>
+	<market-gateway-processes>
+		<process name="IC Markets" active="false">
+			<exec>hft2ctrader</exec>
+			<log-file-name>icmarkets.log</log-file-name>
+			<initial-dir>/var/lib/hft/marketplace-gateways/ctrader</initial-dir>
+			<param>bridge</param>
+			<param>--hft-ipc-endpoint=$(HFT_ENDPOINT)</param>
+			<param>--hft-ipc-port=$(HFT_PORT)</param>
+			<param>--log-severity=INFO</param>
+			<param>--broker=IC Markets</param>
+		</process>
+	</market-gateway-processes>
+
+	<market bridge="IC Markets" sessid="icmarkets-session" >
+		<auth account="demo">
+			<!--
+				Example credentials.
+			-->
+
+			<client-id>3383_y6jxYgYnMyO9inyayd2oFsoxdnkAkydoStzM0HM6nTScqmK7vD</client-id>
+			<client-secret>21fIJ9Xvk6ZYMz7gR65qBn5DvcUT0C8tBQ4zoz8GNFakGvdrPE</client-secret>
+			<access-token>Bqr32tgJVqXFOIlexqYFdxddgY8hrpOJQKnpEkkXwIA</access-token>
+			<account-id>12345678</account-id>
+		</auth>
+
+		<!--
+			Enter the instrument tickers for which you want to download here
+			data from the stock exchange and then transferred to HFT,
+			here is an example:
+
+			<instrument ticker="EURUSD"/>
+		-->
+	</market>
+
+	<dukascopy-emulator>
+
+		<!--
+			Example entry.
+		-->
+
+		<instrument-property ticker="EURUSD"
+				pip-significant-digit="4"
+				pip-value-per-contract="0.0003876"
+				long-dayswap-per-contract="-0.0001558"
+				short-dayswap-per-contract="0.0000038"
+				commision-per-contract="0.0001649"
+		/>
+
+	</dukascopy-emulator>
+
+</hft>

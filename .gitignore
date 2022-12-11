@@ -1,7 +1,6 @@
 3rd-party/boost
 3rd-party/boost_*
 3rd-party/protobuf
-etc/deploy/hft-config.xml
 hft/hft-config.h
 hft/CMakeCache.txt
 hft/cmake_install.cmake
