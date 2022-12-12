@@ -366,6 +366,7 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
                 dii.step_volume_ = res.symbol(i).stepvolume();
                 dii.max_volume_  = res.symbol(i).maxvolume();
                 dii.min_volume_  = res.symbol(i).minvolume();
+                dii.lot_size_    = res.symbol(i).lotsize();
 
                 hft2ctrader_log(TRACE) << "Instrument: "
                                        << id2ticker_[symbolid]
@@ -1170,31 +1171,31 @@ bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, c
         return false;
     }
 
-    int int_voulume_in_cents = 100.0 * volume;
-    int_voulume_in_cents /= instrument_info_[instrument_id].step_volume_;
-    int_voulume_in_cents *= instrument_info_[instrument_id].step_volume_;
+    int int_volume_in_cents = instrument_info_[instrument_id].lot_size_ * volume;
+    int_volume_in_cents /= instrument_info_[instrument_id].step_volume_;
+    int_volume_in_cents *= instrument_info_[instrument_id].step_volume_;
 
-    if (int_voulume_in_cents < instrument_info_[instrument_id].min_volume_)
+    if (int_volume_in_cents < instrument_info_[instrument_id].min_volume_)
     {
         hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume (in cents) ‘"
-                               << int_voulume_in_cents << "’ is less than minimum required (in cents)‘"
+                               << int_volume_in_cents << "’ is less than minimum required (in cents)‘"
                                << instrument_info_[instrument_id].min_volume_
                                << "’ for instrument ‘" << instrument << "’";
 
         return false;
     }
 
-    if (int_voulume_in_cents > instrument_info_[instrument_id].max_volume_)
+    if (int_volume_in_cents > instrument_info_[instrument_id].max_volume_)
     {
         hft2ctrader_log(ERROR) << "ctrader_create_market_order_ex: Requested volume (in cents) ‘"
-                               << int_voulume_in_cents << "’ is more than maximum allowed (in cents) ‘"
+                               << int_volume_in_cents << "’ is more than maximum allowed (in cents) ‘"
                                << instrument_info_[instrument_id].max_volume_
                                << "’ for instrument ‘" << instrument << "’";
 
         return false;
     }
 
-    ctrader_create_market_order(identifier, instrument_id, pt, int_voulume_in_cents, config_.get_auth_account_id());
+    ctrader_create_market_order(identifier, instrument_id, pt, int_volume_in_cents, config_.get_auth_account_id());
 
     return true;
 }

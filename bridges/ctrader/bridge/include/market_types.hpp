@@ -104,13 +104,14 @@ typedef struct _detailed_instrument_info
 {
     _detailed_instrument_info(void)
         : instrument_id_ {0}, step_volume_ {0}, max_volume_ {0},
-          min_volume_ {0}
+          min_volume_ {0}, lot_size_ {0}
     {}
 
     int instrument_id_;
     int step_volume_;
     int max_volume_;
     int min_volume_;
+    int lot_size_;
 
 } detailed_instrument_info;
 

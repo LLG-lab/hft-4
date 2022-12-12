@@ -371,7 +371,7 @@ void grid::load_grid(void)
     }
     catch (const std::runtime_error &e)
     {
-        hft_log(WARNING) << "load grid:: Unalbe to load file ‘grid.json’";
+        hft_log(WARNING) << "load grid: Unalbe to load file ‘grid.json’";
 
         return;
     }
