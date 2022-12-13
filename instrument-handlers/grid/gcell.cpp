@@ -57,16 +57,3 @@ void gcell::detatch_position(const std::string &position_id)
 
     throw std::runtime_error(error_message);
 }
-
-/*
-void gcell::parse_from_json(const boost::json::object &json_obj)
-{
-// FIXME: To be implemented.
-}
-
-std::string gcell::export_to_json(void) const
-{
-    return std::string("\"") + get_id() + std::string("\": \"")
-           + position_id_ + std::string("\"");
-}
-*/

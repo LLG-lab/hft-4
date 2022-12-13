@@ -254,6 +254,8 @@ void grid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::respo
                       << "’: #" << gcells_[index-1].get_id()
                       << " → #" << gcells_[index].get_id() << ".";
 
+        save_grid();
+
         return;
     }
 
