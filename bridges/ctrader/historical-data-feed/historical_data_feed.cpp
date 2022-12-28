@@ -2,10 +2,10 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2022 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2023 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
-**  CAUTION! This application is an intellectual propery              **
+**  CAUTION! This application is an intellectual property             **
 **           of LLG Ryszard Gradowski. This application as            **
 **           well as any part of source code cannot be used,          **
 **           modified and distributed by third party person           **
@@ -521,7 +521,7 @@ std::string historical_data_feed::make_csv_entry_str(unsigned long timestamp, in
 {
     //
     // Example entry:
-    // 18.11.2022 00:00:00.119,1.03613,1.03606,3.68,4.04
+    // 18.11.2023 00:00:00.119,1.03613,1.03606,3.68,4.04
     //
 
     return timestamp2string(timestamp) + std::string(",")

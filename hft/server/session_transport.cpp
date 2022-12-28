@@ -2,10 +2,10 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2022 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2023 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
-**  CAUTION! This application is an intellectual propery              **
+**  CAUTION! This application is an intellectual property             **
 **           of LLG Ryszard Gradowski. This application as            **
 **           well as any part of source code cannot be used,          **
 **           modified and distributed by third party person           **
@@ -17,7 +17,6 @@
 #include <ctime>
 #include <cstdio>
 
-// #include <hft_utils.hpp>
 #include <session_transport.hpp>
 #include <hft_response.hpp>
 
@@ -28,19 +27,6 @@ void session_transport::handle_read(const boost::system::error_code &error)
 {
     if (! error)
     {
-/*
-FIXME: Unused anymore.
-* 
-        //
-        // Update information about time when the
-        // request arrived.
-        //
-
-        time_t t = time(0);
-        struct tm *now = localtime(&t);
-
-        request_time_ = boost::posix_time::time_duration(now -> tm_hour, now -> tm_min, now -> tm_sec, 0);
-*/
         //
         // Extract the newline-delimited message from the buffer.
         //

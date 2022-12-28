@@ -2,10 +2,10 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2022 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2023 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
-**  CAUTION! This application is an intellectual propery              **
+**  CAUTION! This application is an intellectual property             **
 **           of LLG Ryszard Gradowski. This application as            **
 **           well as any part of source code cannot be used,          **
 **           modified and distributed by third party person           **
@@ -43,7 +43,7 @@ private:
 
     logging_severity log_severity_;
     sms::config sms_config_;
-}; 
+};
 
 #endif /* __HFT_SERVER_CONFIG__ */
 

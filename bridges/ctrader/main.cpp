@@ -2,10 +2,10 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2022 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2023 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
-**  CAUTION! This application is an intellectual propery              **
+**  CAUTION! This application is an intellectual property             **
 **           of LLG Ryszard Gradowski. This application as            **
 **           well as any part of source code cannot be used,          **
 **           modified and distributed by third party person           **
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     try
     {
         std::cout << "hft2ctrader - HFT ⇌  cTrader intermediary client, version " << hft2ctrader_version() << "\n";
-        std::cout << "Copyright © 2017 - 2022 by LLG Ryszard Gradowski, All Rights Reserved.\n\n";
+        std::cout << "Copyright © 2017 - 2023 by LLG Ryszard Gradowski, All Rights Reserved.\n\n";
 
         if (argc == 1 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
         {

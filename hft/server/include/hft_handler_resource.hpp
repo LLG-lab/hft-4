@@ -2,10 +2,10 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2022 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2023 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
-**  CAUTION! This application is an intellectual propery              **
+**  CAUTION! This application is an intellectual property             **
 **           of LLG Ryszard Gradowski. This application as            **
 **           well as any part of source code cannot be used,          **
 **           modified and distributed by third party person           **
@@ -37,14 +37,14 @@ public:
 
         autosaver(hft_handler_resource &hhr)
             : hhr_(hhr) {}
-    
+
         hft_handler_resource &hhr_;
     };
 
     hft_handler_resource(void) = delete;
 
     hft_handler_resource(const std::string &file_name, const std::string &logger_id);
-    
+
     ~hft_handler_resource(void);
 
     autosaver create_autosaver(void) { return autosaver(*this); }

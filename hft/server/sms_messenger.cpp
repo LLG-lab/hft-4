@@ -2,10 +2,10 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2022 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2023 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
-**  CAUTION! This application is an intellectual propery              **
+**  CAUTION! This application is an intellectual property             **
 **           of LLG Ryszard Gradowski. This application as            **
 **           well as any part of source code cannot be used,          **
 **           modified and distributed by third party person           **
@@ -58,7 +58,7 @@ void sms_messenger::work(const sms_messenger_data &data)
                               + std::string("&msg_type=1&encoding=utf-8&unicode=0")
                               + (config_.sandbox ? std::string("&sandbox=1") : std::string("&sandbox=0"));
 
-            hft_log(INFO) << "Sending SMS to recipient " << recipient;
+            hft_log(INFO) << "Sending SMS to recipient ‘" << recipient << "’.";
 
             http_client_.clear_buffer();
             http_client_.download_remote_target(url);
