@@ -18,8 +18,8 @@ public:
     std::string get_position(void) const { return position_id_; }
     bool has_position_confirmed(void) const { return position_confirmed_; }
     void confirm_position(void);
-    void attach_position(const std::string &position_id);
-    void detatch_position(const std::string &position_id);
+    void attach_position(const std::string &position_id, int &counter);
+    void detatch_position(const std::string &position_id, int &counter);
 
     bool inside_trading_zone(int ask_pips) const { return (trade_min_limit_ <= ask_pips && trade_max_limit_ >= ask_pips); }
 

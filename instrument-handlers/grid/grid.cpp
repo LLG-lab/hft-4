@@ -13,6 +13,8 @@ grid::grid(const instrument_handler::init_info &general_config)
       persistent_ {false},
       contracts_ {0.0},
       max_spread_ {0xFFFF},
+      active_gcells_ {0},
+      active_gcells_limit_ {0},
       positions_confirmed_ {false},
       awaiting_position_status_counter_ {false}
 {
@@ -32,11 +34,12 @@ void grid::init_handler(const boost::json::object &specific_config)
 
     //
     //  "handler_options": {
-    //      "persistent": false,
+    //      "persistent": false,     /* Optional, default: false */
     //      "contracts": 0.01,
     //      "max_spread": 12,
     //      "price_limit": 32.24,
-    //      "gcells": 18
+    //      "gcells": 18,
+    //      "active_gcells_limit":10 /* Optional, default: gcells */
     //  }
     //
 
@@ -90,6 +93,28 @@ void grid::init_handler(const boost::json::object &specific_config)
                               + std::to_string(gcells_number);
 
             throw std::runtime_error(msg.c_str());
+        }
+
+        if (json_exist_attribute(specific_config, "active_gcells_limit"))
+        {
+            active_gcells_limit_ = json_get_int_attribute(specific_config, "active_gcells_limit");
+
+            if (active_gcells_limit_ <= 0)
+            {
+                std::string msg = "Attribute ‘active_gcells_limit’ must be greater than 0, got "
+                                  + std::to_string(active_gcells_limit_);
+
+                throw std::runtime_error(msg.c_str());
+            }
+
+            hft_log(INFO) << "init: Active gcells are limited to "
+                          << active_gcells_limit_ << ".";
+        }
+        else
+        {
+            hft_log(INFO) << "init: Active gcells are unlimited.";
+
+            active_gcells_limit_ = gcells_number;
         }
 
         int pips_span = price_limit_pips / gcells_number;
@@ -206,7 +231,7 @@ void grid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::respo
         {
             auto pos_id = uid();
             market.open_long(pos_id, contracts_);
-            gcells_[index].attach_position(pos_id);
+            gcells_[index].attach_position(pos_id, active_gcells_);
 
             hft_log(INFO) << "Opening position ‘"
                           << pos_id << "’ in cell #"
@@ -229,15 +254,24 @@ void grid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::respo
     // Condition (I).
     if (! gcells_[index].has_position() && ! gcells_[index-1].has_position())
     {
-        auto pos_id = uid();
-        market.open_long(pos_id, contracts_);
-        gcells_[index].attach_position(pos_id);
+        if (active_gcells_ < active_gcells_limit_)
+        {
+            auto pos_id = uid();
+            market.open_long(pos_id, contracts_);
+            gcells_[index].attach_position(pos_id, active_gcells_);
 
-        hft_log(INFO) << "Opening position ‘"
-                      << pos_id << "’ in cell #"
-                      << gcells_[index].get_id();
+            hft_log(INFO) << "Opening position ‘"
+                          << pos_id << "’ in cell #"
+                          << gcells_[index].get_id();
 
-        current_state_ = state::WAIT_FOR_STATUS;
+            current_state_ = state::WAIT_FOR_STATUS;
+        }
+        else
+        {
+            hft_log(INFO) << "Cannot open position, since amount "
+                          << "of active gcells has reached the limit ‘"
+                          << active_gcells_limit_ << "’.";
+        }
 
         return;
     }
@@ -246,8 +280,8 @@ void grid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::respo
     if (! gcells_[index].has_position() && gcells_[index-1].has_position())
     {
         auto pos_id = gcells_[index-1].get_position();
-        gcells_[index-1].detatch_position(pos_id);
-        gcells_[index].attach_position(pos_id);
+        gcells_[index-1].detatch_position(pos_id, active_gcells_);
+        gcells_[index].attach_position(pos_id, active_gcells_);
         gcells_[index].confirm_position();
 
         hft_log(INFO) << "Internal transfered position ‘" << pos_id
@@ -303,7 +337,7 @@ void grid::on_position_open(const hft::protocol::request::open_notify &msg, hft:
             }
             else
             {
-                gcells_[i].detatch_position(msg.id);
+                gcells_[i].detatch_position(msg.id, active_gcells_);
 
                 hft_log(INFO) << "position_open: Failed to open position ‘"
                               << msg.id << "’.";
@@ -330,7 +364,7 @@ void grid::on_position_close(const hft::protocol::request::close_notify &msg, hf
         {
             if (gcells_[i].has_position() && gcells_[i].get_position() == msg.id)
             {
-                gcells_[i].detatch_position(msg.id);
+                gcells_[i].detatch_position(msg.id, active_gcells_);
 
                 save_grid();
 
@@ -408,7 +442,7 @@ void grid::load_grid(void)
                           << pos_id << "’ to cell #"
                           << gcells_[i].get_id() << ".";
 
-            gcells_[i].attach_position(pos_id);
+            gcells_[i].attach_position(pos_id, active_gcells_);
         }
     }
 }
@@ -456,7 +490,7 @@ void grid::verify_position_confirmation_status(void)
             hft_log(WARNING) << "Position ‘" << gcells_[i].get_position()
                              << "’ does not exist on market anymore, removing from grid.";
 
-            gcells_[i].detatch_position(gcells_[i].get_position());
+            gcells_[i].detatch_position(gcells_[i].get_position(), active_gcells_);
 
             to_be_save = true;
         }
@@ -487,7 +521,7 @@ void grid::await_position_status(void)
                     hft_log(WARNING) << "Position ‘" << gcells_[i].get_position()
                                      << "’ has not been confirmed within defined time, removing from grid.";
 
-                    gcells_[i].detatch_position(gcells_[i].get_position());
+                    gcells_[i].detatch_position(gcells_[i].get_position(), active_gcells_);
                 }
             }
 

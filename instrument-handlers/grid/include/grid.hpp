@@ -40,6 +40,8 @@ private:
     bool persistent_;
     double contracts_;
     int max_spread_;
+    int active_gcells_;
+    int active_gcells_limit_;
 
     //
     // Flag ‘positions_confirmed_’ in constructor set to false.

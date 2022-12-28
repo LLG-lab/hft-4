@@ -24,7 +24,7 @@ void gcell::confirm_position(void)
     }
 }
 
-void gcell::attach_position(const std::string &position_id)
+void gcell::attach_position(const std::string &position_id, int &counter)
 {
     if (has_position())
     {
@@ -38,14 +38,16 @@ void gcell::attach_position(const std::string &position_id)
 
     position_id_ = position_id;
     position_confirmed_ = false;
+    counter++;
 }
 
-void gcell::detatch_position(const std::string &position_id)
+void gcell::detatch_position(const std::string &position_id, int &counter)
 {
     if (position_id == position_id_)
     {
         position_id_.clear();
         position_confirmed_ = false;
+        counter--;
 
         return;
     }
