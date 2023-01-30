@@ -35,13 +35,13 @@ if [ "x$USER_OPTION" != "x" ] ; then
         show_help
         exit 0
     elif [ "x$USER_OPTION" = "x--debug" ] ; then
-        CMAKE_OPTION="${CMAKE_OPTION} -DCMAKE_BUILD_TYPE:STRING=Debug"
+        CMAKE_OPTION="-DCMAKE_BUILD_TYPE:STRING=Debug"
     elif [ "x$USER_OPTION" = "x--release" ] ; then
-        CMAKE_OPTION="${CMAKE_OPTION} -DCMAKE_BUILD_TYPE:STRING=Release"
+        CMAKE_OPTION="-DCMAKE_BUILD_TYPE:STRING=Release"
     elif [ "x$USER_OPTION" = "x--release-with-debuginfo" ] ; then
-        CMAKE_OPTION="${CMAKE_OPTION} -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo"
+        CMAKE_OPTION="-DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo"
     elif [ "x$USER_OPTION" = "x--release-min-size" ] ; then
-        CMAKE_OPTION="${CMAKE_OPTION} -DCMAKE_BUILD_TYPE:STRING=MinSizeRel"
+        CMAKE_OPTION="-DCMAKE_BUILD_TYPE:STRING=MinSizeRel"
     else
         echo "Unrecognized option '$USER_OPTION'. Use option --help for info about available options"
         exit 1

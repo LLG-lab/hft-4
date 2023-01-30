@@ -93,7 +93,6 @@ std::string timestamp2string(unsigned long millis)
 
 int draft_main(int argc, char *argv[])
 {
-
 /*
     std::vector<download_data> c;
     c.emplace_back(10, 6, quote_type::ASK);

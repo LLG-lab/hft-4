@@ -61,7 +61,6 @@ fi
 
 ## Put project into exchange volume.
 pushd ../ > /dev/null
-mkdir -p ${SELF_DIR}/exchange/SOURCES
 tar -cf ${SELF_DIR}/exchange/SOURCES/hft-project.tar --exclude-from=.gitignore *
 popd > /dev/null
 

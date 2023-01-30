@@ -8,11 +8,9 @@ pushd $PROJECT_TREE_DIRECTORY > /dev/null
 # Check if we have boost.
 #
 
-#https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2
-
-BOOST_DIRECTORY="3rd-party/boost_1_81_0"
-BOOST_TARBALL=boost_1_81_0.tar.bz2
-BOOST_URL="https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/$BOOST_TARBALL"
+BOOST_DIRECTORY="3rd-party/boost_1_75_0"
+BOOST_TARBALL=boost_1_75_0.tar.bz2
+BOOST_URL="https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/$BOOST_TARBALL"
 
 if [ -d $BOOST_DIRECTORY ] ; then
     echo "Boost libraries already downloaded into the project tree"

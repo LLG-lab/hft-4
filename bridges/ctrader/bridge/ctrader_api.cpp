@@ -207,12 +207,7 @@ void ctrader_api::send_message(uint payloadType, const std::string &payload)
     proto_msg.set_payloadtype(payloadType);
     proto_msg.set_payload(payload);
 
-    #if GOOGLE_PROTOBUF_VERSION < 3004000
     int size = proto_msg.ByteSize();
-    #else
-    int size = proto_msg.ByteSizeLong();
-    #endif
-
     std::vector<char> buffer(size);
 
     proto_msg.SerializeToArray(&buffer.front(), size);
