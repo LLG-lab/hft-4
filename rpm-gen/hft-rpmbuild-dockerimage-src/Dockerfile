@@ -1,7 +1,7 @@
 FROM centos:centos7
-ARG BOOST_DIR=boost_1_75_0
-ARG BOOST_TARBALL=boost_1_75_0.tar.bz2
-ARG BOOST_URL=https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source//$BOOST_TARBALL
+ARG BOOST_DIR=boost_1_81_0
+ARG BOOST_TARBALL=boost_1_81_0.tar.bz2
+ARG BOOST_URL=https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/$BOOST_TARBALL
 RUN yum -y update
 RUN yum -y install centos-release-scl
 RUN yum -y install \

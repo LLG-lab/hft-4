@@ -289,7 +289,7 @@ bool historical_data_feed::has_instrument_info(const std::vector<char> &data)
                     break;
             }
 
-            hft2ctrader_log(INFO) << "  commission: " << res.symbol(0).commission()
+            hft2ctrader_log(INFO) << "  commission: " << res.symbol(0).precisetradingcommissionrate()
                                   << " " << commission_type;
 
             return true;
