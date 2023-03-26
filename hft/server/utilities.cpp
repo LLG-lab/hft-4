@@ -87,6 +87,35 @@ unsigned long ptime2timestamp(const boost::posix_time::ptime &t)
     return (t - begin).total_milliseconds();
 }
 
+boost::posix_time::ptime timestamp2ptime(unsigned long timestamp)
+{
+    using namespace boost::posix_time;
+
+    ptime pt { boost::gregorian::date(1970, boost::date_time::Jan, 1) };
+    pt = pt + milliseconds(timestamp);
+
+    return pt;
+}
+
+std::string timestamp2string(unsigned long timestamp)
+{
+    using namespace boost::posix_time;
+
+    ptime pt { boost::gregorian::date(1970, boost::date_time::Jan, 1) };
+    pt = pt + milliseconds(timestamp);
+    
+//////////////
+    char buff[13]; // Size of ‘hh:mm:ss.fff’ plus null character.
+
+    int frac = 1000.0*((double) pt.time_of_day().fractional_seconds() / 1000000.0); // XXX Nie powinno być modulo?
+
+    snprintf(buff, sizeof(buff), "%02d%c%02d%c%02d%c%03d", (int) pt.time_of_day().hours(), ':', (int) pt.time_of_day().minutes(), ':', (int) pt.time_of_day().seconds(), '.', frac);
+//////////////
+
+    return boost::gregorian::to_iso_extended_string(pt.date()) + " "
+           + buff;
+}
+
 std::string find_free_name(const std::string &file_name)
 {
     int index = 0;

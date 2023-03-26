@@ -177,13 +177,13 @@ void hft_dukascopy_emulator::handle_close_position(const std::string &id, const 
 
     if (it -> second.direction == hft::protocol::response::position_direction::POSITION_LONG)
     {
-        total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_long_dayswap_per_contract();
+        total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_long_dayswap_per_lot();
         pos.pips_yield = floating2pips(pos.instrument, tick_info.bid) - (it -> second.open_price_pips);
         price = tick_info.bid;
     }
     else if (it -> second.direction == hft::protocol::response::position_direction::POSITION_SHORT)
     {
-        total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_short_dayswap_per_contract();
+        total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_short_dayswap_per_lot();
         pos.pips_yield = (it -> second.open_price_pips) - floating2pips(pos.instrument, tick_info.ask);
         price = tick_info.ask;
     }
@@ -194,13 +194,16 @@ void hft_dukascopy_emulator::handle_close_position(const std::string &id, const 
 
     pos.total_swaps = total_swaps;
 
-    equity_ += (pos.pips_yield) * (pos.qty) * instruments_[pos.instrument] -> property.get_pip_value_per_contract();
-    equity_ += total_swaps;
-    equity_ -= 2.0 * (pos.qty) * instruments_[pos.instrument] -> property.get_commision_per_contract();
+    pos.money_yield = 0.0;
+    pos.money_yield += (pos.pips_yield) * (pos.qty) * instruments_[pos.instrument] -> property.get_pip_value_per_lot();
+    pos.money_yield += total_swaps;
+    pos.money_yield -= 2.0 * (pos.qty) * instruments_[pos.instrument] -> property.get_commision_per_lot();
+
+    equity_ += pos.money_yield;
 
     positions_.erase(it);
 
-    pos.equity = get_equity_at_moment(); //equity_;
+    pos.equity = get_equity_at_moment();
     pos.still_opened = positions_.size();
 
     emulation_result_.trades.push_back(pos);
@@ -228,7 +231,7 @@ void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response:
 
     double free_margin = get_free_margin_at_moment(get_equity_at_moment());
 
-    if (free_margin < instruments_[tick_info.instrument] -> property.get_margin_required_per_contract() * opi.qty_)
+    if (free_margin < instruments_[tick_info.instrument] -> property.get_margin_required_per_lot() * opi.qty_)
     {
         hft::protocol::response reply;
 
@@ -302,12 +305,12 @@ double hft_dukascopy_emulator::get_equity_at_moment(void) const
 
         if (pos.second.direction == hft::protocol::response::position_direction::POSITION_LONG)
         {
-            total_swaps = days * (qty) * instruments_.at(pos.second.instrument) -> property.get_long_dayswap_per_contract();
+            total_swaps = days * (qty) * instruments_.at(pos.second.instrument) -> property.get_long_dayswap_per_lot();
             pips_yield = floating2pips(pos.second.instrument, instruments_.at(pos.second.instrument) -> official.bid) - (pos.second.open_price_pips);
         }
         else if (pos.second.direction == hft::protocol::response::position_direction::POSITION_SHORT)
         {
-            total_swaps = days * (qty) * instruments_.at(pos.second.instrument) -> property.get_short_dayswap_per_contract();
+            total_swaps = days * (qty) * instruments_.at(pos.second.instrument) -> property.get_short_dayswap_per_lot();
             pips_yield = (pos.second.open_price_pips) - floating2pips(pos.second.instrument, instruments_.at(pos.second.instrument) -> official.ask);
         }
         else
@@ -315,9 +318,9 @@ double hft_dukascopy_emulator::get_equity_at_moment(void) const
             throw std::runtime_error("Illegal position direction");
         }
 
-        equity += (pips_yield) * (qty) * instruments_.at(pos.second.instrument) -> property.get_pip_value_per_contract();
+        equity += (pips_yield) * (qty) * instruments_.at(pos.second.instrument) -> property.get_pip_value_per_lot();
         equity += total_swaps;
-        equity -= 2.0 * (qty) * instruments_.at(pos.second.instrument) -> property.get_commision_per_contract();
+        equity -= 2.0 * (qty) * instruments_.at(pos.second.instrument) -> property.get_commision_per_lot();
     }
 
     return equity;
@@ -330,7 +333,7 @@ double hft_dukascopy_emulator::get_free_margin_at_moment(double equity_at_moment
     for (auto &pos : positions_)
     {
         double qty = pos.second.qty;
-        used_margin += instruments_.at(pos.second.instrument) -> property.get_margin_required_per_contract() * qty;
+        used_margin += instruments_.at(pos.second.instrument) -> property.get_margin_required_per_lot() * qty;
     }
 
     return equity_at_moment - used_margin;

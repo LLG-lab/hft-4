@@ -72,10 +72,10 @@
 
 		<instrument-property ticker="EURUSD"
 				pip-significant-digit="4"
-				pip-value-per-contract="0.0003876"
-				long-dayswap-per-contract="-0.0001558"
-				short-dayswap-per-contract="0.0000038"
-				commision-per-contract="0.0001649"
+				pip-value-per-lot="0.0003876"
+				long-dayswap-per-lot="-0.0001558"
+				short-dayswap-per-lot="0.0000038"
+				commision-per-lot="0.0001649"
 		/>
 
 	</dukascopy-emulator>

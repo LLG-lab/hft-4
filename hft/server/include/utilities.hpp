@@ -31,6 +31,10 @@ unsigned long get_current_timestamp(void);
 
 unsigned long ptime2timestamp(const boost::posix_time::ptime &t);
 
+boost::posix_time::ptime timestamp2ptime(unsigned long timestamp);
+
+std::string timestamp2string(unsigned long timestamp);
+
 std::string find_free_name(const std::string &file_name);
 
 std::string expand_env_variable(const std::string &input);

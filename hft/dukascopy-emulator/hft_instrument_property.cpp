@@ -29,11 +29,11 @@
 //	<dukascopy-emulator>
 //		<instrument-property ticker="EUR/USD"
 //				pip-significant-digit="4"
-//				pip-value-per-contract="0.0003876"
-//				long-dayswap-per-contract="-0.0001558"
-//				short-dayswap-per-contract="0.0000038"
-//				commision-per-contract="0.0001649"
-//              margin-required-per-contract="0.155"
+//				pip-value-per-lot="0.0003876"
+//				long-dayswap-per-lot="-0.0001558"
+//				short-dayswap-per-lot="0.0000038"
+//				commision-per-lot="0.0001649"
+//              margin-required-per-lot="0.155"
 //		/>
 //	</dukascopy-emulator>
 //
@@ -132,94 +132,94 @@ hft_instrument_property::hft_instrument_property(const std::string &instrument,
                 pip_significant_digit_ = psd.at(0);
 
                 //
-                // Get ‘pip-value-per-contract’.
+                // Get ‘pip-value-per-lot’.
                 //
 
-                xml_attribute<> *pip_value_per_contract_attr = node -> first_attribute("pip-value-per-contract");
+                xml_attribute<> *pip_value_per_lot_attr = node -> first_attribute("pip-value-per-lot");
 
-                if (pip_value_per_contract_attr == nullptr)
+                if (pip_value_per_lot_attr == nullptr)
                 {
                     std::ostringstream error;
 
-                    error << "Missing ‘pip-value-per-contract’ attribute in ‘instrument-property’ node in ‘"
+                    error << "Missing ‘pip-value-per-lot’ attribute in ‘instrument-property’ node in ‘"
                           << config_file_name << "’ file";
 
                     throw std::runtime_error(error.str());
                 }
 
-                pip_value_per_contract_ = std::stod(std::string(pip_value_per_contract_attr -> value()));
+                pip_value_per_lot_ = std::stod(std::string(pip_value_per_lot_attr -> value()));
 
                 //
-                // Get ‘long-dayswap-per-contract’.
+                // Get ‘long-dayswap-per-lot’.
                 //
 
-                xml_attribute<> *long_dayswap_per_contract_attr = node -> first_attribute("long-dayswap-per-contract");
+                xml_attribute<> *long_dayswap_per_lot_attr = node -> first_attribute("long-dayswap-per-lot");
 
-                if (long_dayswap_per_contract_attr == nullptr)
+                if (long_dayswap_per_lot_attr == nullptr)
                 {
                     std::ostringstream error;
 
-                    error << "Missing ‘long-dayswap-per-contract’ attribute in ‘instrument-property’ node in ‘"
+                    error << "Missing ‘long-dayswap-per-lot’ attribute in ‘instrument-property’ node in ‘"
                           << config_file_name << "’ file";
 
                     throw std::runtime_error(error.str());
                 }
 
-                long_dayswap_per_contract_ = std::stod(std::string(long_dayswap_per_contract_attr -> value()));
+                long_dayswap_per_lot_ = std::stod(std::string(long_dayswap_per_lot_attr -> value()));
 
                 //
-                // Get ‘short-dayswap-per-contract’.
+                // Get ‘short-dayswap-per-lot’.
                 //
 
-                xml_attribute<> *short_dayswap_per_contract_attr = node -> first_attribute("short-dayswap-per-contract");
+                xml_attribute<> *short_dayswap_per_lot_attr = node -> first_attribute("short-dayswap-per-lot");
 
-                if (short_dayswap_per_contract_attr == nullptr)
+                if (short_dayswap_per_lot_attr == nullptr)
                 {
                     std::ostringstream error;
 
-                    error << "Missing ‘short-dayswap-per-contract’ attribute in ‘instrument-property’ node in ‘"
+                    error << "Missing ‘short-dayswap-per-lot’ attribute in ‘instrument-property’ node in ‘"
                           << config_file_name << "’ file";
 
                     throw std::runtime_error(error.str());
                 }
 
-                short_dayswap_per_contract_ = std::stod(std::string(short_dayswap_per_contract_attr -> value()));
+                short_dayswap_per_lot_ = std::stod(std::string(short_dayswap_per_lot_attr -> value()));
 
                 //
-                // Get ‘commision-per-contract’.
+                // Get ‘commision-per-lot’.
                 //
 
-                xml_attribute<> *commision_per_contract_attr = node -> first_attribute("commision-per-contract");
+                xml_attribute<> *commision_per_lot_attr = node -> first_attribute("commision-per-lot");
 
-                if (commision_per_contract_attr == nullptr)
+                if (commision_per_lot_attr == nullptr)
                 {
                     std::ostringstream error;
 
-                    error << "Missing ‘commision-per-contract’ attribute in ‘instrument-property’ node in ‘"
+                    error << "Missing ‘commision-per-lot’ attribute in ‘instrument-property’ node in ‘"
                           << config_file_name << "’ file";
 
                     throw std::runtime_error(error.str());
                 }
 
-                commision_per_contract_ = std::stod(std::string(commision_per_contract_attr -> value()));
+                commision_per_lot_ = std::stod(std::string(commision_per_lot_attr -> value()));
 
                 //
-                // Get ‘margin-required-per-contract’.
+                // Get ‘margin-required-per-lot’.
                 //
 
-                xml_attribute<> *margin_required_per_contract_attr = node -> first_attribute("margin-required-per-contract");
+                xml_attribute<> *margin_required_per_lot_attr = node -> first_attribute("margin-required-per-lot");
 
-                if (margin_required_per_contract_attr == nullptr)
+                if (margin_required_per_lot_attr == nullptr)
                 {
                     std::ostringstream error;
 
-                    error << "Missing ‘margin-required-per-contract’ attribute in ‘instrument-property’ node in ‘"
+                    error << "Missing ‘margin-required-per-lot’ attribute in ‘instrument-property’ node in ‘"
                           << config_file_name << "’ file";
 
                     throw std::runtime_error(error.str());
                 }
 
-                margin_required_per_contract_ = std::stod(std::string(margin_required_per_contract_attr -> value()));
+                margin_required_per_lot_ = std::stod(std::string(margin_required_per_lot_attr -> value()));
 
                 return;
             }

@@ -70,3 +70,10 @@ instrument-handlers/grid/libgrid.so.*
 instrument-handlers/grid/libgrid.so
 instrument-handlers/grid/Makefile
 instrument-handlers/grid/CMakeFiles
+instrument-handlers/xgrid/CMakeCache.txt
+instrument-handlers/xgrid/cmake_install.cmake
+instrument-handlers/xgrid/install_manifest.txt
+instrument-handlers/xgrid/libxgrid.so.*
+instrument-handlers/xgrid/libxgrid.so
+instrument-handlers/xgrid/Makefile
+instrument-handlers/xgrid/CMakeFiles

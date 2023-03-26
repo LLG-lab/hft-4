@@ -47,6 +47,7 @@ public:
         boost::posix_time::ptime close_time;
         double equity;
         double total_swaps;
+        double money_yield;
         bool closed_forcibly;
         int still_opened;
     };

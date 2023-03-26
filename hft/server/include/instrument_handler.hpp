@@ -76,6 +76,7 @@ protected:
     std::string get_logger_id(void) const { return std::string("handler_") + get_ticker_fmt2(); }
     std::string get_instrument_description(void) const { return handler_informations_.description; }
     int floating2pips(double price) const;
+    double pips2floating(int pips) const;
     static std::string uid(void);
     bool can_play(const boost::posix_time::ptime &current_time_point) const { return handler_informations_.ttf.can_play(current_time_point); }
 

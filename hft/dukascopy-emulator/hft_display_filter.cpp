@@ -44,10 +44,11 @@ void hft_display_filter::display(const hft_dukascopy_emulator::emulation_result 
         print_number(x.pips_yield, 6);  std::cout << "  ";
         print_number(x.qty, 6);         std::cout << "  ";
 
-        std::cout << boost::posix_time::to_simple_string(x.open_time) << " - " << boost::posix_time::to_simple_string(x.close_time) << "  ";
+        std::cout << boost::posix_time::to_simple_string(x.open_time) << " – " << boost::posix_time::to_simple_string(x.close_time) << "  ";
 
         print_number(x.equity, 10);     std::cout << "  ";
         print_number(x.total_swaps, 6); std::cout << "  ";
+        print_number(x.money_yield, 6); std::cout << "  ";
 
         std::cout << x.still_opened;
 

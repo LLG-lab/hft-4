@@ -29,6 +29,13 @@ int instrument_handler::floating2pips(double price) const
     return hft::utils::floating2pips(price, pips_digit);
 }
 
+double instrument_handler::pips2floating(int pips) const
+{
+    double result = pips;
+
+    return result / pow(10, handler_informations_.pips_digit);
+}
+
 std::string instrument_handler::uid(void)
 {
     static char arr[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',

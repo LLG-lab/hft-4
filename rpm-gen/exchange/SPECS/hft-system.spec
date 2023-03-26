@@ -47,6 +47,10 @@ pushd instrument-handlers/grid
 scl enable devtoolset-7 "cmake . -DCMAKE_BUILD_TYPE:STRING=Release"
 scl enable devtoolset-7 make
 popd
+pushd instrument-handlers/xgrid
+scl enable devtoolset-7 "cmake . -DCMAKE_BUILD_TYPE:STRING=Release"
+scl enable devtoolset-7 make
+popd
 pushd  bridges/ctrader
 scl enable devtoolset-7 "./configure --release"
 scl enable devtoolset-7 make
@@ -72,6 +76,7 @@ install -m 755 -p instrument-handlers/smart_martingale/libsmart_martingale.so $R
 install -m 755 -p instrument-handlers/simple_tracker/libsimple_tracker.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
 install -m 755 -p instrument-handlers/blsh/libblsh.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
 install -m 755 -p instrument-handlers/grid/libgrid.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
+install -m 755 -p instrument-handlers/xgrid/libxgrid.so $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/instrument-handlers/
 # Install cTrader bridge
 install -m 755 -p bridges/ctrader/hft2ctrader $RPM_BUILD_ROOT/%{_sharedstatedir}/hft/marketplace-gateways/ctrader/hft2ctrader
 

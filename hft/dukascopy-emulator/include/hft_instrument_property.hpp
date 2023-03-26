@@ -28,20 +28,20 @@ public:
     ~hft_instrument_property(void) = default;
 
     char   get_pip_significant_digit(void) const { return pip_significant_digit_; }
-    double get_pip_value_per_contract(void) const { return pip_value_per_contract_; }
-    double get_long_dayswap_per_contract(void) const { return long_dayswap_per_contract_; }
-    double get_short_dayswap_per_contract(void) const { return short_dayswap_per_contract_; }
-    double get_commision_per_contract(void) const { return commision_per_contract_; }
-    double get_margin_required_per_contract(void) const { return margin_required_per_contract_; }
+    double get_pip_value_per_lot(void) const { return pip_value_per_lot_; }
+    double get_long_dayswap_per_lot(void) const { return long_dayswap_per_lot_; }
+    double get_short_dayswap_per_lot(void) const { return short_dayswap_per_lot_; }
+    double get_commision_per_lot(void) const { return commision_per_lot_; }
+    double get_margin_required_per_lot(void) const { return margin_required_per_lot_; }
 
 private:
 
     char   pip_significant_digit_;
-    double pip_value_per_contract_;
-    double long_dayswap_per_contract_;
-    double short_dayswap_per_contract_;
-    double commision_per_contract_;
-    double margin_required_per_contract_;
+    double pip_value_per_lot_;
+    double long_dayswap_per_lot_;
+    double short_dayswap_per_lot_;
+    double commision_per_lot_;
+    double margin_required_per_lot_;
 
 };
 
