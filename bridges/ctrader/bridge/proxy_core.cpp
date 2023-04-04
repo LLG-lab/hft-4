@@ -40,10 +40,11 @@ void display_closepositiondetail(const ProtoOAClosePositionDetail &cpd, const st
 
 } // namespace.
 
-proxy_core::proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_config &config)
+proxy_core::proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, heartbeat_watchdog &hw, const hft2ctrader_config &config)
     : ctrader_api {ctrader_conn}, hft_api {hft_conn}, config_{config},
       last_heartbeat_ {0ul},
-      registration_timestamp_ {0ul}
+      registration_timestamp_ {0ul},
+      hw_ {hw}
 {
    el::Loggers::getLogger("session", true);
 }
@@ -298,6 +299,8 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
         ctrader_heart_beat();
 
         last_heartbeat_ = now;
+
+        hw_.notify();
     }
 
     switch (payload_type)
@@ -310,6 +313,8 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
 
             last_heartbeat_ = now;
 
+            hw_.notify();
+        
             break;
         }
         case PROTO_OA_ACCOUNT_DISCONNECT_EVENT:

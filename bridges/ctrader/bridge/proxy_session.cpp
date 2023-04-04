@@ -23,8 +23,8 @@
     CLOG(__X__, "proxy")
 
 
-proxy_session::proxy_session(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_config &config)
-    : proxy_core(ctrader_conn, hft_conn, config),
+proxy_session::proxy_session(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, heartbeat_watchdog &hw, const hft2ctrader_config &config)
+    : proxy_core(ctrader_conn, hft_conn, hw, config),
       hft_session_initialized_ {false},
       config_ {config}
 {

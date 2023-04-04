@@ -44,6 +44,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/bridge/include/aux_functions.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/market_types.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/hft2ctrader_config.hpp
+     ${PROJECT_SOURCE_DIR}/bridge/include/heartbeat_watchdog.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_ssl_connection.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/ctrader_api.hpp
      ${PROJECT_SOURCE_DIR}/bridge/include/proxy_core.hpp
@@ -62,6 +63,7 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/main.cpp
      ${PROJECT_SOURCE_DIR}/draft_main.cpp
      ${PROJECT_SOURCE_DIR}/bridge/aux_functions.cpp
+     ${PROJECT_SOURCE_DIR}/bridge/heartbeat_watchdog.cpp
      ${PROJECT_SOURCE_DIR}/bridge/hft2ctrade_bridge_main.cpp
      ${PROJECT_SOURCE_DIR}/bridge/hft2ctrader_config.cpp
      ${PROJECT_SOURCE_DIR}/bridge/ctrader_ssl_connection.cpp

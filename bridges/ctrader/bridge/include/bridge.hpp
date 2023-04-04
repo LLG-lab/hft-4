@@ -20,6 +20,7 @@
 #include <boost/msm/back/state_machine.hpp>
 
 #include <proxy_session.hpp>
+#include <heartbeat_watchdog.hpp>
 
 class bridge
 {
@@ -36,7 +37,8 @@ public:
     bridge(boost::asio::io_context &io_context, const hft2ctrader_config &cfg)
         : ctrader_conn_ { io_context, cfg },
           hft_conn_ { io_context, cfg },
-          sm_ { ctrader_conn_, hft_conn_, cfg }
+          hw_ { io_context },
+          sm_ { ctrader_conn_, hft_conn_, hw_, cfg }
     {
         ctrader_conn_.set_on_connected_callback([this](void)
             {
@@ -72,6 +74,8 @@ private:
 
     ctrader_ssl_connection ctrader_conn_;
     hft_connection hft_conn_;
+
+    heartbeat_watchdog hw_;
 
     msm::back::state_machine<proxy_session> sm_;
 };

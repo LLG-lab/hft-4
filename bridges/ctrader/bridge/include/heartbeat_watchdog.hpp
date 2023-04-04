@@ -14,35 +14,34 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __PROXY_SESSION_HPP__
-#define __PROXY_SESSION_HPP__
+#ifndef __HEARTBEAT_WATCHDOG_HPP__
+#define __HEARTBEAT_WATCHDOG_HPP__
 
-#include <proxy_core.hpp>
+#include <boost/asio.hpp>
 
-class proxy_session : public proxy_core
+class heartbeat_watchdog
 {
 public:
 
-    proxy_session(void) = delete;
-    proxy_session(proxy_session &) = delete;
-    proxy_session(proxy_session &&) = delete;
-    proxy_session(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, heartbeat_watchdog &hw, const hft2ctrader_config &config);
+    heartbeat_watchdog(void) = delete;
+    heartbeat_watchdog(heartbeat_watchdog &) = delete;
+    heartbeat_watchdog(heartbeat_watchdog &&) = delete;
 
-protected:
+    heartbeat_watchdog(boost::asio::io_context &io_context);
 
-    virtual void on_init(void) override;
-    virtual void on_tick(const tick_type &tick) override;
-    virtual void on_position_open(const position_info &position) override;
-    virtual void on_position_open_error(const order_error_info &order_error) override;
-    virtual void on_position_close(const closed_position_info &closed_position) override;
-    virtual void on_position_close_error(const order_error_info &order_error) override;
-    virtual void on_hft_advice(const hft_api::hft_response &adv, bool broker_ready) override;
+    ~heartbeat_watchdog(void) {}
+
+    void notify(void);
 
 private:
 
-    bool hft_session_initialized_;
+    void start_timer(void);
 
-    const hft2ctrader_config &config_;
+    unsigned long last_notify_time_;
+   
+    boost::asio::io_context &io_ctx_;
+    boost::asio::steady_timer wakeup_timer_;
 };
 
-#endif /* __PROXY_SESSION_HPP__ */
+#endif /* __HEARTBEAT_WATCHDOG_HPP__ */
+

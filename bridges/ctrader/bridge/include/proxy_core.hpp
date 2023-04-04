@@ -22,6 +22,7 @@
 
 #include <boost/msm/front/state_machine_def.hpp>
 
+#include <heartbeat_watchdog.hpp>
 #include <ctrader_api.hpp>
 #include <hft_api.hpp>
 #include <hft2ctrader_config.hpp>
@@ -39,7 +40,7 @@ public:
 
     proxy_core(proxy_core &&) = delete;
 
-    proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, const hft2ctrader_config &config);
+    proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft_conn, heartbeat_watchdog &hw, const hft2ctrader_config &config);
 
     virtual ~proxy_core(void) = default;
 
@@ -198,6 +199,8 @@ private:
 
     unsigned long last_heartbeat_;
     unsigned long registration_timestamp_;
+
+    heartbeat_watchdog &hw_;
 };
 
 #endif /* __PROXY_CORE_HPP__ */
