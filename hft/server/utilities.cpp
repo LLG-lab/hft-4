@@ -103,14 +103,15 @@ std::string timestamp2string(unsigned long timestamp)
 
     ptime pt { boost::gregorian::date(1970, boost::date_time::Jan, 1) };
     pt = pt + milliseconds(timestamp);
-    
-//////////////
+
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wformat-truncation"
     char buff[13]; // Size of ‘hh:mm:ss.fff’ plus null character.
 
     int frac = 1000.0*((double) pt.time_of_day().fractional_seconds() / 1000000.0); // XXX Nie powinno być modulo?
 
     snprintf(buff, sizeof(buff), "%02d%c%02d%c%02d%c%03d", (int) pt.time_of_day().hours(), ':', (int) pt.time_of_day().minutes(), ':', (int) pt.time_of_day().seconds(), '.', frac);
-//////////////
+    #pragma GCC diagnostic pop
 
     return boost::gregorian::to_iso_extended_string(pt.date()) + " "
            + buff;

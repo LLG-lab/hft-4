@@ -23,6 +23,9 @@
 
 #include <daemon_process.hpp>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 bool daemon_process::daemonized_ = false;
 
 daemon_process::daemon_process(const std::string &pid_file_name)
@@ -185,3 +188,5 @@ void daemon_process::process_daemonize(void)
 
     daemon_process::daemonized_ = true;
 }
+
+#pragma GCC diagnostic pop

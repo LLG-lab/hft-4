@@ -27,6 +27,9 @@ namespace {
 
 std::string time_duration2string(boost::posix_time::time_duration d)
 {
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wformat-truncation"
+
     char buff[13]; // Size of ‘hh:mm:ss.fff’ plus null character.
 
     int frac = 1000.0*((double) d.fractional_seconds() / 1000000.0);
@@ -34,6 +37,7 @@ std::string time_duration2string(boost::posix_time::time_duration d)
     snprintf(buff, sizeof(buff), "%02d%c%02d%c%02d%c%03d", (int) d.hours(), ':', (int) d.minutes(), ':', (int) d.seconds(), '.', frac);
 
     return buff;
+    #pragma GCC diagnostic pop
 }
 
 } // namespace

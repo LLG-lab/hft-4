@@ -8,8 +8,9 @@ hft/Makefile
 hft/reconfig.status
 hft/hft
 hft/CMakeFiles
-rpm-gen/exchange/RPMS/*
-rpm-gen/exchange/SOURCES/*
+packages/exchange/RPMS/*
+packages/exchange/DEBS/*
+packages/exchange/SOURCES/*
 bridges/dukascopy/export/*
 bridges/dukascopy/target
 bridges/dukascopy/pom.xml
