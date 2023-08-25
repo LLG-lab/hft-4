@@ -78,3 +78,10 @@ instrument-handlers/xgrid/libxgrid.so.*
 instrument-handlers/xgrid/libxgrid.so
 instrument-handlers/xgrid/Makefile
 instrument-handlers/xgrid/CMakeFiles
+instrument-handlers/pyramid/CMakeCache.txt
+instrument-handlers/pyramid/cmake_install.cmake
+instrument-handlers/pyramid/install_manifest.txt
+instrument-handlers/pyramid/Makefile
+instrument-handlers/pyramid/CMakeFiles
+instrument-handlers/pyramid/libpyramid.so.*
+instrument-handlers/pyramid/libpyramid.so

@@ -1,4 +1,4 @@
-#include <xgrid.hpp>
+#include <pyramid.hpp>
 #include <utilities.hpp>
 
 #include <limits>
@@ -13,29 +13,28 @@
 
 namespace hft_ih_plugin {
 
-xgrid::xgrid(const instrument_handler::init_info &general_config)
+pyramid::pyramid(const instrument_handler::init_info &general_config)
     : instrument_handler(general_config),
       current_state_ {state::OPERATIONAL},
       persistent_ {false},
       contracts_ {0.0},
       max_spread_ {0xFFFF},
       active_gcells_ {0},
-      active_gcells_limit_ {0},
+      pyramid_height_ {2},
       dayswap_pips_ {0.0},
-      used_cells_alarm_ {0},
-      user_alarmed_ {false},
       positions_confirmed_ {false},
+      liquidate_pyramid_ {false},
       awaiting_position_status_counter_ {false}
 {
     el::Loggers::getLogger(get_logger_id().c_str(), true);
 
-    hft_log(INFO) << "Starting instrument handler ‘eXtended Grid™’ for instrument ‘"
+    hft_log(INFO) << "Starting instrument handler ‘Pyramid Grid™’ for instrument ‘"
                   << get_ticker() << "’, i.e. ‘"
                   << get_instrument_description()
                   << "’";
 }
 
-void xgrid::init_handler(const boost::json::object &specific_config)
+void pyramid::init_handler(const boost::json::object &specific_config)
 {
     //
     // Going to obtain following attributes (example):
@@ -43,12 +42,11 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
     //
     //  "handler_options": {
-    //      "persistent": false,      /* Optional, default: false */
+    //      "persistent": false,     /* Optional, default: false */
     //      "contracts": 0.01,
     //      "max_spread": 12,
+    //      "pyramid_height": 10,
     //      "dayswap_pips":-0.3,
-    //      "active_gcells_limit":10, /* Optional, default: gcells */
-    //      "used_cells_alarm":20,    /* Optional, default: 0 (disabled) */
     //      "grid_definition": {
     //           .
     //           .
@@ -91,43 +89,21 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
         dayswap_pips_ = json_get_double_attribute(specific_config, "dayswap_pips");
 
-        if (json_exist_attribute(specific_config, "active_gcells_limit"))
+        if (json_exist_attribute(specific_config, "pyramid_height"))
         {
-            active_gcells_limit_ = json_get_int_attribute(specific_config, "active_gcells_limit");
+            pyramid_height_ = json_get_int_attribute(specific_config, "pyramid_height");
 
-            if (active_gcells_limit_ <= 0)
+            if (pyramid_height_ <= 1)
             {
-                std::string msg = "Attribute ‘active_gcells_limit’ must be greater than 0, got "
-                                  + std::to_string(active_gcells_limit_);
+                std::string msg = "Attribute ‘pyramid_height’ must be greater than 1, got "
+                                  + std::to_string(pyramid_height_);
 
                 throw std::runtime_error(msg.c_str());
             }
-
-            hft_log(INFO) << "init: Active gcells are limited to "
-                          << active_gcells_limit_ << ".";
-        }
-        else
-        {
-            hft_log(INFO) << "init: Active gcells are unlimited.";
-
-            active_gcells_limit_ = std::numeric_limits<int>::max();
         }
 
-        if (json_exist_attribute(specific_config, "used_cells_alarm"))
-        {
-            used_cells_alarm_ = json_get_int_attribute(specific_config, "used_cells_alarm");
-
-            if (used_cells_alarm_ < 0)
-            {
-                std::string msg = "Attribute ‘used_cells_alarm’ must be ≥ 0, got "
-                                  + std::to_string(used_cells_alarm_);
-
-                throw std::runtime_error(msg.c_str());
-            }
-
-            hft_log(INFO) << "init: User will be notified when the "
-                          << used_cells_alarm_ << "th position is opened.";
-        }
+        hft_log(INFO) << "init: Pyramid height are "
+                      << pyramid_height_ << ".";
 
         const boost::json::object &grid_def = json_get_object_attribute(specific_config, "grid_definition");
 
@@ -164,7 +140,7 @@ void xgrid::init_handler(const boost::json::object &specific_config)
                 break;
             }
         }
-
+/*
         int max_optimistic_loss = 0;
         int max_pessimistic_loss = 0;
 
@@ -183,7 +159,7 @@ void xgrid::init_handler(const boost::json::object &specific_config)
                       << "pessimistic – " << max_pessimistic_loss
                       << "pips, optimistic – " << max_optimistic_loss
                       << "pips.";
-
+*/
         load_grid();
     }
     catch (const std::runtime_error &e)
@@ -199,7 +175,7 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     }
 }
 
-void xgrid::on_sync(const hft::protocol::request::sync &msg, hft::protocol::response &market)
+void pyramid::on_sync(const hft::protocol::request::sync &msg, hft::protocol::response &market)
 {
     for (int i = 0; i < gcells_.size(); i++)
     {
@@ -215,7 +191,7 @@ void xgrid::on_sync(const hft::protocol::request::sync &msg, hft::protocol::resp
                      << msg.id << "’.";
 }
 
-void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::response &market)
+void pyramid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::response &market)
 {
     verify_position_confirmation_status();
 
@@ -255,108 +231,109 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
     // We're in trading zone.
     //
 
+    if (liquidate_pyramid_)
+    {
+        //
+        // Attempt to liquidate pyramid of all gcells from 0 to index - 1.
+        //
+
+        for (int i = 0; i < index; i++)
+        {
+            if (gcells_[i].has_position() && profitable(i, bid_pips, msg.request_time))
+            {
+                // Close position.
+
+                market.close_position(gcells_[i].get_position_id());
+
+                hft_log(INFO) << "Closing position ‘" << gcells_[i].get_position_id()
+                              << "’ from cell #" << gcells_[i].get_id();
+
+                current_state_ = state::WAIT_FOR_STATUS;
+
+                return;
+            }
+        }
+
+        liquidate_pyramid_ = false;
+    }
+
+    if (gcells_[index].is_terminal())
+    {
+        liquidate_pyramid_ = true;
+        return;
+    }
+
     //
     // We have four separate conditions:
     //
-    //   index |     |     |  •  |  •  |
+    // index+n |     |     |  •  |  •  |
     // --------------+------------------
-    // index–n |     |  •  |     |  •  |
+    //   index |     |  •  |     |  •  |
     //           (I)  (II)  (III) (IV)
+    //
+    // Condition (I)   – Open position LONG on grid at index; return.
+    // Condition (II)  – Try liquidate pyramid.
+    // Condition (III) – Close position at index+n if such position
+    //                   is lossy enough; return.
+    // Condition (IV)  – Close position at index+n if such position
+    //                   is lossy enough; return.
+    //
 
-    // Conditions (I) / (II).
-    if (! gcells_[index].has_position() && ! gcells_[index].is_terminal())
+    int successor_index = get_successor_position_index(index);
+
+    // Conditions (III) / (IV).
+    if (successor_index > 0 && lossy_enough(successor_index, bid_pips, msg.request_time))
     {
-        int precedessor_index = get_precedessor_position_index(index);
+        // Close position.
+        market.close_position(gcells_[successor_index].get_position_id());
 
-        if (precedessor_index < 0) // Conditions (I).
-        {
-            if (active_gcells_ < active_gcells_limit_)
-            {
-                auto pos_id = uid();
-                market.open_long(pos_id, contracts_);
-                gcells_[index].attach_position(pos_id, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
+        hft_log(INFO) << "Closing position ‘" << gcells_[successor_index].get_position_id()
+                      << "’ from cell #" << gcells_[successor_index].get_id();
 
-                hft_log(INFO) << "Opening position ‘"
-                              << pos_id << "’ in cell #"
-                              << gcells_[index].get_id();
+        current_state_ = state::WAIT_FOR_STATUS;
 
-                current_state_ = state::WAIT_FOR_STATUS;
-            }
-            else
-            {
-                hft_log(INFO) << "Cannot open position, since amount "
-                              << "of active gcells has reached the limit ‘"
-                              << active_gcells_limit_ << "’.";
-            }
-
-            return;
-        }
-        else  // Condition (II).
-        {
-            auto pos_id = gcells_[precedessor_index].get_position_id();
-            gcells_[index].reloc_position(gcells_[precedessor_index]);
-
-            hft_log(INFO) << "Internal transfered position ‘" << pos_id
-                          << "’: #" << gcells_[precedessor_index].get_id()
-                          << " → #" << gcells_[index].get_id() << ".";
-
-            save_grid();
-        }
+        return;
     }
 
-    // For Condition (III) and Condition (IV) do nothing.
 
-    //
-    // Attempt to liquidate pyramid of all gcells from 0 to index - 1.
-    //
-
-    for (int i = 0; i < index; i++)
+    // Conditions (I).
+    if (! gcells_[index].has_position()) // && ! gcells_[index].is_terminal())
     {
-        if (gcells_[i].has_position() && profitable(i, bid_pips, msg.request_time))
-        {
-            // Close position.
+        auto pos_id = uid();
+        market.open_long(pos_id, contracts_);
+        gcells_[index].attach_position(pos_id, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
 
-            market.close_position(gcells_[i].get_position_id());
+        hft_log(INFO) << "Opening position ‘"
+                      << pos_id << "’ in cell #"
+                      << gcells_[index].get_id();
 
-            hft_log(INFO) << "Closing position ‘" << gcells_[i].get_position_id()
-                          << "’ from cell #" << gcells_[i].get_id();
-
-            current_state_ = state::WAIT_FOR_STATUS;
-
-            return;
-        }
+        current_state_ = state::WAIT_FOR_STATUS;
     }
-
-    //
-    // Check for user alarm.
-    //
-
-    if (used_cells_alarm_ > 0 && ! user_alarmed_)
+    else // Conditions (II).
     {
-        int opened_positions = 0;
+        // try liquidate pyramid.
+        int n = 0;
 
-        for (auto &cell : gcells_)
+        for (int i = 0; i < index - 1; i++)
         {
-            if (cell.has_position())
+            if (gcells_[i].has_position() && profitable(i, bid_pips, msg.request_time))
             {
-                opened_positions++;
+                n++;
             }
         }
 
-        if (opened_positions >= used_cells_alarm_)
+        if (n >= pyramid_height_)
         {
-            std::string message = "HFT handler msg: " + get_ticker_fmt2()
-                                  + " opened " + std::to_string(opened_positions)
-                                  + "th position";
+            hft_log(INFO) << "Will now liquidate pyramid with n="
+                          << n << " positions.";
             
-            user_alarmed_ = true;
-            sms_alert(message);
-            save_grid();
+            liquidate_pyramid_ = true;
+            return;
         }
     }
 }
 
-void xgrid::on_position_open(const hft::protocol::request::open_notify &msg, hft::protocol::response &market)
+void pyramid::on_position_open(const hft::protocol::request::open_notify &msg, hft::protocol::response &market)
 {
     if (current_state_ != state::WAIT_FOR_STATUS)
     {
@@ -393,7 +370,7 @@ void xgrid::on_position_open(const hft::protocol::request::open_notify &msg, hft
     awaiting_position_status_counter_ = 0;
 }
 
-void xgrid::on_position_close(const hft::protocol::request::close_notify &msg, hft::protocol::response &market)
+void pyramid::on_position_close(const hft::protocol::request::close_notify &msg, hft::protocol::response &market)
 {
     if (current_state_ != state::WAIT_FOR_STATUS)
     {
@@ -432,7 +409,7 @@ void xgrid::on_position_close(const hft::protocol::request::close_notify &msg, h
 // Private methods.
 //
 
-bool xgrid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const
+bool pyramid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const
 {
     int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(gcells_[cell_index].get_position_timestamp()).date()).days();
 
@@ -446,7 +423,21 @@ bool xgrid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime cu
     return false;
 }
 
-int xgrid::get_precedessor_position_index(int index) const
+bool pyramid::lossy_enough(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const
+{
+    int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(gcells_[cell_index].get_position_timestamp()).date()).days();
+
+    int yield = bid_pips - gcells_[cell_index].get_position_price_pips() + dayswap_pips_*days_elapsed;
+
+    if ((-1)*yield >= gcells_[cell_index].span())
+    {
+        return true;
+    }
+
+    return false;
+}
+
+int pyramid::get_precedessor_position_index(int index) const
 {
     for (int i = index - 1; i >= 0; i--)
     {
@@ -459,7 +450,20 @@ int xgrid::get_precedessor_position_index(int index) const
     return -1;
 }
 
-std::map<char, std::pair<int, bool>> xgrid::get_cell_types(const boost::json::object &obj) const
+int pyramid::get_successor_position_index(int index) const
+{
+    for (int i = index + 1; i < gcells_.size(); i++)
+    {
+        if (gcells_[i].has_position())
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+std::map<char, std::pair<int, bool>> pyramid::get_cell_types(const boost::json::object &obj) const
 {
     using namespace boost::json;
 
@@ -538,7 +542,7 @@ std::map<char, std::pair<int, bool>> xgrid::get_cell_types(const boost::json::ob
     return result;
 }
 
-void xgrid::create_grid(const boost::json::object &grid_def)
+void pyramid::create_grid(const boost::json::object &grid_def)
 {
     //
     // Example:
@@ -621,7 +625,7 @@ void xgrid::create_grid(const boost::json::object &grid_def)
     }
 }
 
-void xgrid::load_grid(void)
+void pyramid::load_grid(void)
 {
     using namespace boost::json;
 
@@ -686,14 +690,9 @@ void xgrid::load_grid(void)
             gcells_[i].attach_position(position_id, position_timestamp, position_price_pips, active_gcells_);
         }
     }
-
-    if (json_exist_attribute(obj, "user_alarmed"))
-    {
-        user_alarmed_ = json_get_bool_attribute(obj, "user_alarmed");
-    }
 }
 
-void xgrid::save_grid(void)
+void pyramid::save_grid(void)
 {
     if (! persistent_)
     {
@@ -703,10 +702,6 @@ void xgrid::save_grid(void)
     std::ostringstream json_data;
 
     json_data << "{\n";
-
-    json_data << "\t\"user_alarmed\":"
-              << (user_alarmed_ ? "true" : "false")
-              << ",\n";
 
     for (int i = 0; i < gcells_.size(); i++)
     {
@@ -733,7 +728,7 @@ void xgrid::save_grid(void)
     file_put_contents("grid.json", json_data.str());
 }
 
-void xgrid::verify_position_confirmation_status(void)
+void pyramid::verify_position_confirmation_status(void)
 {
     if (positions_confirmed_)
     {
@@ -763,7 +758,7 @@ void xgrid::verify_position_confirmation_status(void)
     positions_confirmed_ = true;
 }
 
-void xgrid::await_position_status(void)
+void pyramid::await_position_status(void)
 {
     static const int max_aps_counter_value = 60;
 

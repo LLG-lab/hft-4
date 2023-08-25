@@ -508,7 +508,11 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
         case PROTO_OA_ERROR_RES:
         {
             hft2ctrader_log(ERROR) << "Response ERROR:\n"
-                                   << aux::hexdump(payload);
+                                   << aux::hexdump(payload)
+                                   << "\n\n"
+                                   << "To minimize potential problems process is now terminating.";
+
+            ::exit(0);
 
             break;
         }

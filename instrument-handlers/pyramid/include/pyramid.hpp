@@ -2,8 +2,8 @@
 #include <instrument_handler.hpp>
 #include <gcell.hpp>
 
-#ifndef __XGRID_HPP__
-#define __XGRID_HPP__
+#ifndef __PYRAMID_HPP__
+#define __PYRAMID_HPP__
 
 #include <utility>
 #include <map>
@@ -12,14 +12,14 @@
 
 namespace hft_ih_plugin {
 
-class xgrid : public instrument_handler
+class pyramid : public instrument_handler
 {
 public:
 
-    xgrid(const instrument_handler::init_info &general_config);
-    xgrid(void) = delete;
+    pyramid(const instrument_handler::init_info &general_config);
+    pyramid(void) = delete;
 
-    ~xgrid(void) = default;
+    ~pyramid(void) = default;
 
     virtual void init_handler(const boost::json::object &specific_config);
 
@@ -36,7 +36,9 @@ private:
     void save_grid(void);
 
     bool profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const;
+    bool lossy_enough(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const;
     int  get_precedessor_position_index(int index) const;
+    int  get_successor_position_index(int index) const;
 
     enum class state
     {
@@ -49,17 +51,8 @@ private:
     double contracts_;
     int max_spread_;
     int active_gcells_;
-    int active_gcells_limit_;
+    int pyramid_height_;
     double dayswap_pips_;
-
-    //
-    // Stuff for alarming purpose when
-    // a certain number of positions
-    // have been opened.
-    //
-
-    int used_cells_alarm_;
-    bool user_alarmed_;
 
     //
     // Flag ‘positions_confirmed_’ in constructor set to false.
@@ -73,6 +66,7 @@ private:
     //
 
     bool positions_confirmed_;
+    bool liquidate_pyramid_;
 
     void verify_position_confirmation_status(void);
 
@@ -94,7 +88,7 @@ private:
 
 API instrument_handler_ptr create_plugin(const instrument_handler::init_info &general_config)
 {
-    return new hft_ih_plugin::xgrid(general_config);
+    return new hft_ih_plugin::pyramid(general_config);
 }
 
-#endif /* __XGRID_HPP__ */
+#endif /* __PYRAMID_HPP__ */
