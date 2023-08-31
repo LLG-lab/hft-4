@@ -17,7 +17,6 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
     : instrument_handler(general_config),
       current_state_ {state::OPERATIONAL},
       persistent_ {false},
-      contracts_ {0.0},
       max_spread_ {0xFFFF},
       active_gcells_ {0},
       active_gcells_limit_ {0},
@@ -44,7 +43,11 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     //
     //  "handler_options": {
     //      "persistent": false,      /* Optional, default: false */
-    //      "contracts": 0.01,
+    //      "transactions": {
+    //          .
+    //          .
+    //          .
+    //      },
     //      "max_spread": 12,
     //      "dayswap_pips":-0.3,
     //      "active_gcells_limit":10, /* Optional, default: gcells */
@@ -59,25 +62,9 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
     try
     {
-        if (json_exist_attribute(specific_config, "persistent"))
-        {
-            if (json_get_bool_attribute(specific_config, "persistent"))
-            {
-                persistent_ = true;
+        const boost::json::object &transactions = json_get_object_attribute(specific_config, "transactions");
 
-                hft_log(INFO) << "init: Handler is persistent";
-            }
-        }
-
-        contracts_ = json_get_double_attribute(specific_config, "contracts");
-
-        if (contracts_ <= 0.0)
-        {
-            std::string msg = "Attribute ‘contracts’ must be greater than 0, got "
-                              + std::to_string(contracts_);
-
-            throw std::runtime_error(msg.c_str());
-        }
+        create_money_manager(transactions);
 
         max_spread_ = json_get_int_attribute(specific_config, "max_spread");
 
@@ -184,6 +171,18 @@ void xgrid::init_handler(const boost::json::object &specific_config)
                       << "pips, optimistic – " << max_optimistic_loss
                       << "pips.";
 
+
+        if (json_exist_attribute(specific_config, "persistent"))
+        {
+            if (json_get_bool_attribute(specific_config, "persistent"))
+            {
+                persistent_ = true;
+                hs_.persistent();
+
+                hft_log(INFO) << "init: Handler is persistent";
+            }
+        }
+
         load_grid();
     }
     catch (const std::runtime_error &e)
@@ -273,12 +272,14 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
             if (active_gcells_ < active_gcells_limit_)
             {
                 auto pos_id = uid();
-                market.open_long(pos_id, contracts_);
+                market.open_long(pos_id, mmgmnt_ -> get_number_of_lots(msg.equity));
                 gcells_[index].attach_position(pos_id, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
 
                 hft_log(INFO) << "Opening position ‘"
                               << pos_id << "’ in cell #"
-                              << gcells_[index].get_id();
+                              << gcells_[index].get_id()
+                              << ", balance before open: "
+                              << msg.equity;
 
                 current_state_ = state::WAIT_FOR_STATUS;
             }
@@ -536,6 +537,48 @@ std::map<char, std::pair<int, bool>> xgrid::get_cell_types(const boost::json::ob
     }
 
     return result;
+}
+
+void xgrid::create_money_manager(const boost::json::object &transactions)
+{
+    std::string model = json_get_string_attribute(transactions, "model");
+
+    if (model == "FLAT")
+    {
+        mm_flat_initializer mmfi;
+        mmfi.number_of_lots_ = json_get_double_attribute(transactions, "number_of_lots");
+
+        if (mmfi.number_of_lots_ <= 0.0)
+        {
+            std::string msg = "Attribute ‘transactions.number_of_lots’ must be greater than 0, got "
+                              + std::to_string(mmfi.number_of_lots_);
+
+            throw std::runtime_error(msg.c_str());
+        }
+
+        mmgmnt_.reset(new money_management(mmfi, hs_));
+    }
+    else if (model == "PROGRESSIVE")
+    {
+        mm_progressive_initializer mmpi;
+        mmpi.slope_ = json_get_double_attribute(transactions, "slope");
+
+        if (mmpi.slope_ <= 0.0)
+        {
+            std::string msg = "Attribute ‘transactions.slope’ must be greater than 0, got "
+                              + std::to_string(mmpi.slope_);
+
+            throw std::runtime_error(msg.c_str());
+        }
+
+        mmgmnt_.reset(new money_management(mmpi, hs_));
+    }
+    else
+    {
+        std::string msg = "Unrecognized value ‘" + model + "’ of attribute ‘transactions.model’";
+
+        throw std::runtime_error(msg.c_str());
+    }
 }
 
 void xgrid::create_grid(const boost::json::object &grid_def)

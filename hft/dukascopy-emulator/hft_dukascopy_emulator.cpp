@@ -62,7 +62,7 @@ void hft_dukascopy_emulator::proceed(void)
             }
         }
 
-        hft_connection_.send_tick(tick_info.instrument, current_equity, current_free_margin, tick_info, reply);
+        hft_connection_.send_tick(tick_info.instrument, equity_, current_free_margin, tick_info, reply);
 
         if (reply.is_error())
         {

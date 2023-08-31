@@ -1,5 +1,6 @@
 #include <boost/dll.hpp>
 #include <instrument_handler.hpp>
+#include <money_management.hpp>
 #include <gcell.hpp>
 
 #ifndef __XGRID_HPP__
@@ -31,6 +32,7 @@ public:
 private:
 
     std::map<char, std::pair<int, bool>> get_cell_types(const boost::json::object &obj) const;
+    void create_money_manager(const boost::json::object &transactions);
     void create_grid(const boost::json::object &grid_def);
     void load_grid(void);
     void save_grid(void);
@@ -46,7 +48,6 @@ private:
 
     state current_state_;
     bool persistent_;
-    double contracts_;
     int max_spread_;
     int active_gcells_;
     int active_gcells_limit_;
@@ -88,6 +89,7 @@ private:
     void await_position_status(void);
 
     std::vector<gcell> gcells_;
+    std::shared_ptr<money_management> mmgmnt_;
 };
 
 } /* namespace hft_ih_plugin */
