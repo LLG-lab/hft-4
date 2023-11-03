@@ -44,7 +44,7 @@ static struct dukas_emulator_options_type
     dukas_emulator_options.__X__
 
 #define hft_log(__X__) \
-    CLOG(__X__, "dukascopy_emulator")
+    CLOG(__X__, "forex_emulator")
 
 static std::map<std::string, std::string> mk_instrument_info_map(const std::vector<std::string> &instruments)
 {
@@ -123,16 +123,16 @@ int hft_dukasemu_main(int argc, char *argv[])
 
     prog_opts::options_description hidden("Hidden options");
     hidden.add_options()
-        ("dukascopy-emulator", "")
+        ("forex-emulator", "")
     ;
 
-    prog_opts::options_description desc("Options for dukascopy-emulator");
+    prog_opts::options_description desc("Options for forex-emulator");
     desc.add_options()
         ("help,h", "produce help message")
         ("host,H", prog_opts::value<std::string>(&hftOption(host)) -> default_value("localhost"), "HFT server hostname or ip address.")
         ("port,P", prog_opts::value<std::string>(&hftOption(port)) -> default_value("8137"), "HFT server listen port.")
         ("instrument,i", prog_opts::value<std::vector<std::string>>(&hftOption(instruments)), "<ticker>:<csv_file_name_or_file_name_with_list_of_csv_files>")
-        ("sessid,s", prog_opts::value<std::string>(&hftOption(sessid)) -> default_value("dukascopy-emulator"), "Session ID")
+        ("sessid,s", prog_opts::value<std::string>(&hftOption(sessid)) -> default_value("forex-emulator"), "Session ID")
         ("bankroll,b", prog_opts::value<int>(&hftOption(bankroll)) -> default_value(10000), "Initial virtual deposit")
         ("check-bankruptcy,B", prog_opts::value<bool>(&hftOption(check_bankruptcy)) -> default_value(false), "Stop simulation when equity drops to zero")
         ("invert-hft-decision,I", prog_opts::value<bool>(&hftOption(invert_hft_decision)) -> default_value(false), "Play the opposite of the HFT decision")
@@ -162,7 +162,7 @@ int hft_dukasemu_main(int argc, char *argv[])
     // Setup logging.
     //
 
-    el::Logger *logger = el::Loggers::getLogger("dukascopy_emulator", true);
+    el::Logger *logger = el::Loggers::getLogger("forex_emulator", true);
 
     if (hftOption(instruments).size() == 0)
     {
@@ -174,14 +174,14 @@ int hft_dukasemu_main(int argc, char *argv[])
     try
     {
 
-        hft_dukascopy_emulator simulation(hftOption(host),
-                                          hftOption(port),
-                                          hftOption(sessid),
-                                          mk_instrument_info_map(hftOption(instruments)),
-                                          hftOption(bankroll),
-                                          hftOption(config_file_name),
-                                          hftOption(check_bankruptcy),
-                                          hftOption(invert_hft_decision));
+        hft_forex_emulator simulation(hftOption(host),
+                                      hftOption(port),
+                                      hftOption(sessid),
+                                      mk_instrument_info_map(hftOption(instruments)),
+                                      hftOption(bankroll),
+                                      hftOption(config_file_name),
+                                      hftOption(check_bankruptcy),
+                                      hftOption(invert_hft_decision));
 
         hft_display_filter hdf;
         hdf.display(simulation.get_result());

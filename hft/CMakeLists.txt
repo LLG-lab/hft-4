@@ -85,12 +85,12 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/server/include/instrument_handler.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_handler_resource.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_ih_dummy.hpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/include/hft_instrument_property.hpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/include/csv_loader.hpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/include/csv_data_supplier.hpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/include/hft_server_connector.hpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/include/hft_dukascopy_emulator.hpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/include/hft_display_filter.hpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/include/hft_instrument_property.hpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/include/csv_loader.hpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/include/csv_data_supplier.hpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/include/hft_server_connector.hpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/include/hft_forex_emulator.hpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/include/hft_display_filter.hpp
 )
 
 #
@@ -117,13 +117,13 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/server/instrument_handler.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_handler_resource.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_ih_dummy.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_dukasemu_main.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_instrument_property.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/csv_loader.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/csv_data_supplier.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_server_connector.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_dukascopy_emulator.cpp
-     ${PROJECT_SOURCE_DIR}/dukascopy-emulator/hft_display_filter.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/hft_forexemu_main.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/hft_instrument_property.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/csv_loader.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/csv_data_supplier.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/hft_server_connector.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/hft_forex_emulator.cpp
+     ${PROJECT_SOURCE_DIR}/forex-emulator/hft_display_filter.cpp
      ${PROJECT_SOURCE_DIR}/instrument-stats/hft_instrument_stats.cpp
      ${PROJECT_SOURCE_DIR}/../3rd-party/easylogging++/easylogging++.cc
 )
@@ -195,7 +195,7 @@ target_link_libraries(hft "${BOOST_LIBS_PATH}/libboost_program_options.a")
 #
 
 include_directories("${PROJECT_SOURCE_DIR}/server/include")
-include_directories("${PROJECT_SOURCE_DIR}/dukascopy-emulator/include")
+include_directories("${PROJECT_SOURCE_DIR}/forex-emulator/include")
 include_directories("${PROJECT_SOURCE_DIR}/../3rd-party")
 include_directories("${PROJECT_SOURCE_DIR}/../3rd-party/boost")
 include_directories("${PROJECT_SOURCE_DIR}/../3rd-party/easylogging++")

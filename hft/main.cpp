@@ -48,7 +48,7 @@ static struct
 } hft_programs[] = {
     { .tool_name = "draft",                    .start_program = &draft_main },
     { .tool_name = "server",                   .start_program = &hft_server_main },
-    { .tool_name = "dukascopy-emulator",       .start_program = &hft_dukasemu_main },
+    { .tool_name = "forex-emulator",       .start_program = &hft_dukasemu_main },
     { .tool_name = "instrument-stats",         .start_program = &hft_instrument_stats }
 };
 
@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
             std::cout << "Usage:\n"
                       << "  hft <tool> [tool options]\n\n"
                       << "Available tools:\n"
-                      << "  dukascopy-emulator        HFT TCP Client emulates Dukascopy forex trading\n"
-                      << "                            platform using historical CSV data\n\n"
+                      << "  forex-emulator            HFT TCP Client emulates forex broker and trading\n"
+                      << "                            account using historical CSV data\n\n"
                       << "  instrument-stats          Calculates various instrument statistics using\n"
                       << "                            historical CSV data\n\n"
                       << "  server                    HFT Trading TCP Server. Expert Advisor for\n"

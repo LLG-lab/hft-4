@@ -24,7 +24,7 @@ hft_display_filter::hft_display_filter(void)
 {
 }
 
-void hft_display_filter::display(const hft_dukascopy_emulator::emulation_result &data)
+void hft_display_filter::display(const hft_forex_emulator::emulation_result &data)
 {
     int length = get_max_instrument_strlen(data);
 
@@ -116,7 +116,7 @@ void hft_display_filter::print_string(const std::string &s, int len)
     std::cout << s << completion;
 }
 
-size_t hft_display_filter::get_max_instrument_strlen(const hft_dukascopy_emulator::emulation_result &data)
+size_t hft_display_filter::get_max_instrument_strlen(const hft_forex_emulator::emulation_result &data)
 {
     size_t maxl = 0;
 

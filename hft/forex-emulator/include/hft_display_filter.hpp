@@ -17,7 +17,7 @@
 #ifndef __HFT_DISPLAY_FILTER_HPP__
 #define __HFT_DISPLAY_FILTER_HPP__
 
-#include <hft_dukascopy_emulator.hpp>
+#include <hft_forex_emulator.hpp>
 
 class hft_display_filter
 {
@@ -25,7 +25,7 @@ public:
 
     hft_display_filter(void);
 
-    void display(const hft_dukascopy_emulator::emulation_result &data);
+    void display(const hft_forex_emulator::emulation_result &data);
 
 private:
 
@@ -33,7 +33,7 @@ private:
 
     void print_string(const std::string &s, int len);
 
-    size_t get_max_instrument_strlen(const hft_dukascopy_emulator::emulation_result &data);
+    size_t get_max_instrument_strlen(const hft_forex_emulator::emulation_result &data);
 
     const bool is_tty_output_;
 };

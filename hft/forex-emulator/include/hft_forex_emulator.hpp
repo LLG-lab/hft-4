@@ -14,8 +14,8 @@
 **                                                                    **
 \**********************************************************************/
 
-#ifndef __HFT_DUKASCOPY_EMULATOR_HPP__
-#define __HFT_DUKASCOPY_EMULATOR_HPP__
+#ifndef __HFT_FOREX_EMULATOR_HPP__
+#define __HFT_FOREX_EMULATOR_HPP__
 
 #include <map>
 #include <limits>
@@ -29,7 +29,7 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-class hft_dukascopy_emulator : private boost::noncopyable
+class hft_forex_emulator : private boost::noncopyable
 {
 public:
 
@@ -66,11 +66,11 @@ public:
         bool bankrupt;
     };
 
-    hft_dukascopy_emulator(void) = delete;
+    hft_forex_emulator(void) = delete;
 
-    hft_dukascopy_emulator(const std::string &host, const std::string &port, const std::string &sessid,
-                               const std::map<std::string, std::string> &instrument_data, double deposit,
-                                    const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision);
+    hft_forex_emulator(const std::string &host, const std::string &port, const std::string &sessid,
+                           const std::map<std::string, std::string> &instrument_data, double deposit,
+                               const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision);
 
     const emulation_result &get_result(void) const { return emulation_result_; }
 
@@ -178,4 +178,4 @@ private:
     instruments_info instruments_;
 };
 
-#endif /* __HFT_DUKASCOPY_EMULATOR_HPP__ */
+#endif /* __HFT_FOREX_EMULATOR_HPP__ */

@@ -26,7 +26,7 @@
 // Constructor load XML configuration file and parses
 // following (example) fragment:
 //
-//	<dukascopy-emulator>
+//	<forex-emulator>
 //		<instrument-property ticker="EUR/USD"
 //				pip-significant-digit="4"
 //				pip-value-per-lot="0.0003876"
@@ -35,7 +35,7 @@
 //				commision-per-lot="0.0001649"
 //              margin-required-per-lot="0.155"
 //		/>
-//	</dukascopy-emulator>
+//	</forex-emulator>
 //
 
 hft_instrument_property::hft_instrument_property(const std::string &instrument,
@@ -71,19 +71,19 @@ hft_instrument_property::hft_instrument_property(const std::string &instrument,
         throw std::runtime_error(error.str());
     }
 
-    xml_node<> *dukascopy_emulator_node = root_node -> first_node("dukascopy-emulator");
+    xml_node<> *forex_emulator_node = root_node -> first_node("forex-emulator");
 
-    if (dukascopy_emulator_node == nullptr)
+    if (forex_emulator_node == nullptr)
     {
         std::ostringstream error;
 
-        error << "Cannot find ‘dukascopy-emulator’ node in ‘"
+        error << "Cannot find ‘forex-emulator’ node in ‘"
               << config_file_name << "’";
 
         throw std::runtime_error(error.str());
     }
 
-    for (xml_node<> *node = dukascopy_emulator_node -> first_node(); node; node = node -> next_sibling())
+    for (xml_node<> *node = forex_emulator_node -> first_node(); node; node = node -> next_sibling())
     {
         if (std::string(node -> name()) == "instrument-property")
         {
@@ -229,7 +229,7 @@ hft_instrument_property::hft_instrument_property(const std::string &instrument,
     std::ostringstream error;
 
     error << "Cannot find instrument ‘" << instrument
-          << "’ property settings for dukascopy emulator in config file ‘"
+          << "’ property settings for forex emulator in config file ‘"
           << config_file_name << "’";
 
     throw std::runtime_error(error.str());

@@ -16,9 +16,9 @@
 
 #include <limits>
 
-#include <hft_dukascopy_emulator.hpp>
+#include <hft_forex_emulator.hpp>
 
-hft_dukascopy_emulator::hft_dukascopy_emulator(const std::string &host, const std::string &port, const std::string &sessid,
+hft_forex_emulator::hft_forex_emulator(const std::string &host, const std::string &port, const std::string &sessid,
                                                    const std::map<std::string, std::string> &instrument_data, double deposit,
                                                        const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision)
     : hft_connection_(host, port),
@@ -40,7 +40,7 @@ hft_dukascopy_emulator::hft_dukascopy_emulator(const std::string &host, const st
     proceed();
 }
 
-void hft_dukascopy_emulator::proceed(void)
+void hft_forex_emulator::proceed(void)
 {
     tick_record tick_info;
     hft::protocol::response reply;
@@ -117,7 +117,7 @@ void hft_dukascopy_emulator::proceed(void)
     }
 }
 
-void hft_dukascopy_emulator::close_worst_losing_position(void)
+void hft_forex_emulator::close_worst_losing_position(void)
 {
     double max_loss = std::numeric_limits<double>::max();
     std::string max_loss_pos_id;
@@ -142,7 +142,7 @@ void hft_dukascopy_emulator::close_worst_losing_position(void)
     handle_close_position(max_loss_pos_id, max_loss_tick_info, true);
 }
 
-bool hft_dukascopy_emulator::get_record(tick_record &tick)
+bool hft_forex_emulator::get_record(tick_record &tick)
 {
     for (auto &item : instruments_)
     {
@@ -192,7 +192,7 @@ bool hft_dukascopy_emulator::get_record(tick_record &tick)
     return false;
 }
 
-void hft_dukascopy_emulator::handle_response(const tick_record &tick_info, const hft::protocol::response &reply)
+void hft_forex_emulator::handle_response(const tick_record &tick_info, const hft::protocol::response &reply)
 {
     if (reply.is_error())
     {
@@ -210,7 +210,7 @@ void hft_dukascopy_emulator::handle_response(const tick_record &tick_info, const
     }
 }
 
-hft_dukascopy_emulator::position_status hft_dukascopy_emulator::get_position_status_at_moment(const opened_position &pos, const tick_record &tick_info)
+hft_forex_emulator::position_status hft_forex_emulator::get_position_status_at_moment(const opened_position &pos, const tick_record &tick_info)
 {
     position_status ps;
 
@@ -241,7 +241,7 @@ hft_dukascopy_emulator::position_status hft_dukascopy_emulator::get_position_sta
     return ps;
 }
 
-void hft_dukascopy_emulator::handle_close_position(const std::string &id, const tick_record &tick_info, bool is_forcibly)
+void hft_forex_emulator::handle_close_position(const std::string &id, const tick_record &tick_info, bool is_forcibly)
 {
     auto it = positions_.find(id);
 
@@ -297,7 +297,7 @@ void hft_dukascopy_emulator::handle_close_position(const std::string &id, const 
     handle_response(tick_info, reply);
 }
 
-void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response::open_position_info &opi,
+void hft_forex_emulator::handle_open_position(const hft::protocol::response::open_position_info &opi,
                                                       const tick_record &tick_info)
 {
     auto it = positions_.find(opi.id_);
@@ -383,7 +383,7 @@ void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response:
     handle_response(tick_info, reply);
 }
 
-double hft_dukascopy_emulator::get_equity_at_moment(void) const
+double hft_forex_emulator::get_equity_at_moment(void) const
 {
     double equity = balance_;
 
@@ -422,7 +422,7 @@ double hft_dukascopy_emulator::get_equity_at_moment(void) const
     return equity;
 }
 
-double hft_dukascopy_emulator::get_used_margin_at_moment(void) const
+double hft_forex_emulator::get_used_margin_at_moment(void) const
 {
     double used_margin = 0.0;
 
@@ -435,12 +435,12 @@ double hft_dukascopy_emulator::get_used_margin_at_moment(void) const
     return used_margin;
 }
 
-double hft_dukascopy_emulator::get_free_margin_at_moment(double equity_at_moment) const
+double hft_forex_emulator::get_free_margin_at_moment(double equity_at_moment) const
 {
     return equity_at_moment - get_used_margin_at_moment();
 }
 
-double hft_dukascopy_emulator::get_margin_level_at_moment(double equity_at_moment) const
+double hft_forex_emulator::get_margin_level_at_moment(double equity_at_moment) const
 {
     if (positions_.size() == 0)
     {

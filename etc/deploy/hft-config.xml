@@ -64,7 +64,7 @@
 		-->
 	</market>
 
-	<dukascopy-emulator>
+	<forex-emulator>
 
 		<!--
 			Example entry.
@@ -78,6 +78,6 @@
 				commision-per-lot="0.0001649"
 		/>
 
-	</dukascopy-emulator>
+	</forex-emulator>
 
 </hft>
