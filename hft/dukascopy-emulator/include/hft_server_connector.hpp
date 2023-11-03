@@ -34,7 +34,7 @@ public:
 
     void init(const std::string &sessid, const std::vector<std::string> &instruments);
 
-    void send_tick(const std::string &instrument, double equity, double free_margin,
+    void send_tick(const std::string &instrument, double balance, double free_margin,
                        const csv_data_supplier::csv_record &tick_info, hft::protocol::response &rsp);
 
     void send_open_notify(const std::string &instrument, const std::string &position_id,

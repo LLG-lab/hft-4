@@ -86,6 +86,14 @@ private:
         boost::posix_time::ptime open_time;
     };
 
+    struct position_status
+    {
+        boost::posix_time::ptime moment;
+        double total_swaps;
+        int pips_yield;
+        double money_yield;
+    };
+
     typedef std::map<std::string, opened_position> opened_positions;
 
     struct tick_record : public csv_data_supplier::csv_record
@@ -128,15 +136,25 @@ private:
 
     void proceed(void);
 
+    void close_worst_losing_position(void);
+
     bool get_record(tick_record &tick);
+
+    void handle_response(const tick_record &tick_info, const hft::protocol::response &reply);
 
     void handle_close_position(const std::string &id, const tick_record &tick_info, bool is_forcibly = false);
 
     void handle_open_position(const hft::protocol::response::open_position_info &opi, const tick_record &tick_info);
 
+    position_status get_position_status_at_moment(const opened_position &pos, const tick_record &tick_info);
+
     double get_equity_at_moment(void) const;
 
+    double get_used_margin_at_moment(void) const;
+
     double get_free_margin_at_moment(double equity_at_moment) const;
+
+    double get_margin_level_at_moment(double equity_at_moment) const;
 
     static int days_elapsed(boost::posix_time::ptime begin, boost::posix_time::ptime end)
     {
@@ -152,9 +170,10 @@ private:
     opened_positions positions_;
     hft_server_connector hft_connection_;
 
-    double equity_;
+    double balance_;
     bool check_bankruptcy_;
     bool invert_hft_decision_;
+    bool forbid_new_positions_;
 
     instruments_info instruments_;
 };

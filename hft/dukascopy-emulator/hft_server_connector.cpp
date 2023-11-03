@@ -64,7 +64,7 @@ void hft_server_connector::init(const std::string &sessid, const std::vector<std
     }
 }
 
-void hft_server_connector::send_tick(const std::string &instrument, double equity, double free_margin,
+void hft_server_connector::send_tick(const std::string &instrument, double balance, double free_margin,
                                          const csv_data_supplier::csv_record &tick_info, hft::protocol::response &rsp)
 {
     std::ostringstream payload;
@@ -74,7 +74,7 @@ void hft_server_connector::send_tick(const std::string &instrument, double equit
             << tick_info.request_time << "\",\"ask\":"
             << tick_info.ask << ",\"bid\":"
             << tick_info.bid << ",\"equity\":"
-            << equity  << ",\"free_margin\":"
+            << balance  << ",\"free_margin\":"
             << free_margin << "}\n";
 
     rsp.unserialize(send_recv_server(payload.str()));

@@ -14,15 +14,18 @@
 **                                                                    **
 \**********************************************************************/
 
+#include <limits>
+
 #include <hft_dukascopy_emulator.hpp>
 
 hft_dukascopy_emulator::hft_dukascopy_emulator(const std::string &host, const std::string &port, const std::string &sessid,
                                                    const std::map<std::string, std::string> &instrument_data, double deposit,
                                                        const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision)
     : hft_connection_(host, port),
-      equity_(deposit),
+      balance_(deposit),
       check_bankruptcy_(check_bankruptcy),
-      invert_hft_decision_(invert_hft_decision)
+      invert_hft_decision_(invert_hft_decision),
+      forbid_new_positions_(false)
 {
     std::vector<std::string> instruments;
 
@@ -43,47 +46,60 @@ void hft_dukascopy_emulator::proceed(void)
     hft::protocol::response reply;
     double current_equity;
     double current_free_margin;
+    double current_margin_level;
 
     while (get_record(tick_info))
     {
-        current_equity = get_equity_at_moment();
-        current_free_margin = get_free_margin_at_moment(current_equity);
-
-        if (current_equity < emulation_result_.min_equity) emulation_result_.min_equity = current_equity;
-        if (current_equity > emulation_result_.max_equity) emulation_result_.max_equity = current_equity;
-
-        if (check_bankruptcy_)
+        while (true)
         {
-            if (current_equity <= 0.0)
-            {
-                emulation_result_.bankrupt = true;
+            current_equity = get_equity_at_moment();
+            current_free_margin = get_free_margin_at_moment(current_equity);
 
+            if (current_equity < emulation_result_.min_equity) emulation_result_.min_equity = current_equity;
+            if (current_equity > emulation_result_.max_equity) emulation_result_.max_equity = current_equity;
+
+            if (check_bankruptcy_)
+            {
+                current_margin_level = get_margin_level_at_moment(current_equity);
+
+                if (current_margin_level < 1.0)
+                {
+                    if (positions_.size() > 0)
+                    {
+                        close_worst_losing_position();
+                    }
+                    else if (current_equity <= 0.0)
+                    {
+                        emulation_result_.bankrupt = true;
+
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else
+            {
                 break;
             }
         }
 
-        hft_connection_.send_tick(tick_info.instrument, equity_, current_free_margin, tick_info, reply);
-
-        if (reply.is_error())
+        if (emulation_result_.bankrupt)
         {
-            throw std::runtime_error(reply.get_error_message());
+            break;
         }
 
-        for (auto &x : reply.get_close_positions())
-        {
-            handle_close_position(x, tick_info);
-        }
-
-        for (auto &x : reply.get_new_positions())
-        {
-            handle_open_position(x, tick_info);
-        }
+        hft_connection_.send_tick(tick_info.instrument, balance_, current_free_margin, tick_info, reply);
+        handle_response(tick_info, reply);
     }
 
     //
     // Data end. Close opened positions forcibly.
     //
 
+    forbid_new_positions_ = true;
 
     while (true)
     {
@@ -99,6 +115,31 @@ void hft_dukascopy_emulator::proceed(void)
 
         handle_close_position(it -> first, tick_info, true);
     }
+}
+
+void hft_dukascopy_emulator::close_worst_losing_position(void)
+{
+    double max_loss = std::numeric_limits<double>::max();
+    std::string max_loss_pos_id;
+    tick_record max_loss_tick_info;
+    tick_record tick_info;
+
+    for (auto &pos : positions_)
+    {
+        tick_info = instruments_[pos.second.instrument] -> official;
+        tick_info.instrument = pos.second.instrument;
+
+        auto ps = get_position_status_at_moment(pos.second, tick_info);
+
+        if (ps.money_yield < max_loss)
+        {
+            max_loss_pos_id = pos.first;
+            max_loss_tick_info = tick_info;
+            max_loss = ps.money_yield;
+        }
+    }
+
+    handle_close_position(max_loss_pos_id, max_loss_tick_info, true);
 }
 
 bool hft_dukascopy_emulator::get_record(tick_record &tick)
@@ -151,6 +192,55 @@ bool hft_dukascopy_emulator::get_record(tick_record &tick)
     return false;
 }
 
+void hft_dukascopy_emulator::handle_response(const tick_record &tick_info, const hft::protocol::response &reply)
+{
+    if (reply.is_error())
+    {
+        throw std::runtime_error(reply.get_error_message());
+    }
+
+    for (auto &x : reply.get_close_positions())
+    {
+        handle_close_position(x, tick_info);
+    }
+
+    for (auto &x : reply.get_new_positions())
+    {
+        handle_open_position(x, tick_info);
+    }
+}
+
+hft_dukascopy_emulator::position_status hft_dukascopy_emulator::get_position_status_at_moment(const opened_position &pos, const tick_record &tick_info)
+{
+    position_status ps;
+
+    ps.moment = boost::posix_time::ptime(boost::posix_time::time_from_string(tick_info.request_time));
+
+    int days = days_elapsed(pos.open_time, ps.moment);
+
+    if (pos.direction == hft::protocol::response::position_direction::POSITION_LONG)
+    {
+        ps.total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_long_dayswap_per_lot();
+        ps.pips_yield = floating2pips(pos.instrument, tick_info.bid) - (pos.open_price_pips);
+    }
+    else if (pos.direction == hft::protocol::response::position_direction::POSITION_SHORT)
+    {
+        ps.total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_short_dayswap_per_lot();
+        ps.pips_yield = (pos.open_price_pips) - floating2pips(pos.instrument, tick_info.ask);
+    }
+    else
+    {
+        throw std::runtime_error("Illegal position direction");
+    }
+
+    ps.money_yield = 0.0;
+    ps.money_yield += (ps.pips_yield) * (pos.qty) * instruments_[pos.instrument] -> property.get_pip_value_per_lot();
+    ps.money_yield += ps.total_swaps;
+    ps.money_yield -= 2.0 * (pos.qty) * instruments_[pos.instrument] -> property.get_commision_per_lot();
+
+    return ps;
+}
+
 void hft_dukascopy_emulator::handle_close_position(const std::string &id, const tick_record &tick_info, bool is_forcibly)
 {
     auto it = positions_.find(id);
@@ -163,28 +253,24 @@ void hft_dukascopy_emulator::handle_close_position(const std::string &id, const 
         throw std::runtime_error(err);
     }
 
+    auto ps = get_position_status_at_moment(it -> second, tick_info);
+
     asacp pos;
     pos.instrument      = it -> second.instrument;
     pos.direction       = it -> second.direction;
     pos.closed_forcibly = is_forcibly;
     pos.qty             = it -> second.qty;
     pos.open_time       = it -> second.open_time;
-    pos.close_time      = boost::posix_time::ptime(boost::posix_time::time_from_string(tick_info.request_time));
+    pos.close_time      = ps.moment;
 
-    int days = days_elapsed(pos.open_time, pos.close_time);
-    double total_swaps = 0.0;
     double price = 0.0;
 
     if (it -> second.direction == hft::protocol::response::position_direction::POSITION_LONG)
     {
-        total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_long_dayswap_per_lot();
-        pos.pips_yield = floating2pips(pos.instrument, tick_info.bid) - (it -> second.open_price_pips);
         price = tick_info.bid;
     }
     else if (it -> second.direction == hft::protocol::response::position_direction::POSITION_SHORT)
     {
-        total_swaps = days * (pos.qty) * instruments_[pos.instrument] -> property.get_short_dayswap_per_lot();
-        pos.pips_yield = (it -> second.open_price_pips) - floating2pips(pos.instrument, tick_info.ask);
         price = tick_info.ask;
     }
     else
@@ -192,14 +278,11 @@ void hft_dukascopy_emulator::handle_close_position(const std::string &id, const 
         throw std::runtime_error("Illegal position direction");
     }
 
-    pos.total_swaps = total_swaps;
+    pos.total_swaps = ps.total_swaps;
+    pos.pips_yield  = ps.pips_yield;
+    pos.money_yield = ps.money_yield;
 
-    pos.money_yield = 0.0;
-    pos.money_yield += (pos.pips_yield) * (pos.qty) * instruments_[pos.instrument] -> property.get_pip_value_per_lot();
-    pos.money_yield += total_swaps;
-    pos.money_yield -= 2.0 * (pos.qty) * instruments_[pos.instrument] -> property.get_commision_per_lot();
-
-    equity_ += pos.money_yield;
+    balance_ += pos.money_yield;
 
     positions_.erase(it);
 
@@ -208,12 +291,10 @@ void hft_dukascopy_emulator::handle_close_position(const std::string &id, const 
 
     emulation_result_.trades.push_back(pos);
 
-    if (! is_forcibly)
-    {
-        hft::protocol::response reply;
+    hft::protocol::response reply;
 
-        hft_connection_.send_close_notify(pos.instrument, id, true, price, reply);
-    }
+    hft_connection_.send_close_notify(pos.instrument, id, true, price, reply);
+    handle_response(tick_info, reply);
 }
 
 void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response::open_position_info &opi,
@@ -229,6 +310,19 @@ void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response:
         throw std::runtime_error(err);
     }
 
+    if (forbid_new_positions_)
+    {
+        hft::protocol::response reply;
+
+        hft_connection_.send_open_notify(tick_info.instrument, opi.id_, false, 0.0, reply);
+
+        //
+        // Ignore reply.
+        //
+
+        return;
+    }
+
     double free_margin = get_free_margin_at_moment(get_equity_at_moment());
 
     if (free_margin < instruments_[tick_info.instrument] -> property.get_margin_required_per_lot() * opi.qty_)
@@ -236,6 +330,7 @@ void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response:
         hft::protocol::response reply;
 
         hft_connection_.send_open_notify(tick_info.instrument, opi.id_, false, 0.0, reply);
+        handle_response(tick_info, reply);
 
         return;
     }
@@ -285,11 +380,12 @@ void hft_dukascopy_emulator::handle_open_position(const hft::protocol::response:
     hft::protocol::response reply;
 
     hft_connection_.send_open_notify(op.instrument, op.id, true, price, reply);
+    handle_response(tick_info, reply);
 }
 
 double hft_dukascopy_emulator::get_equity_at_moment(void) const
 {
-    double equity = equity_;
+    double equity = balance_;
 
     for (auto &pos : positions_)
     {
@@ -326,7 +422,7 @@ double hft_dukascopy_emulator::get_equity_at_moment(void) const
     return equity;
 }
 
-double hft_dukascopy_emulator::get_free_margin_at_moment(double equity_at_moment) const
+double hft_dukascopy_emulator::get_used_margin_at_moment(void) const
 {
     double used_margin = 0.0;
 
@@ -336,5 +432,25 @@ double hft_dukascopy_emulator::get_free_margin_at_moment(double equity_at_moment
         used_margin += instruments_.at(pos.second.instrument) -> property.get_margin_required_per_lot() * qty;
     }
 
-    return equity_at_moment - used_margin;
+    return used_margin;
+}
+
+double hft_dukascopy_emulator::get_free_margin_at_moment(double equity_at_moment) const
+{
+    return equity_at_moment - get_used_margin_at_moment();
+}
+
+double hft_dukascopy_emulator::get_margin_level_at_moment(double equity_at_moment) const
+{
+    if (positions_.size() == 0)
+    {
+        return std::numeric_limits<double>::max();
+    }
+
+    //
+    // Assume that get_margin_required_per_lot() are always
+    // greater than zero for all instruments.
+    //
+
+    return equity_at_moment / get_used_margin_at_moment();
 }
