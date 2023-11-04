@@ -60,20 +60,18 @@ void hft_forex_emulator::proceed(void)
 
             if (check_bankruptcy_)
             {
+                if (current_equity <= 0.0)
+                {
+                    emulation_result_.bankrupt = true;
+
+                    break;
+                }
+
                 current_margin_level = get_margin_level_at_moment(current_equity);
 
-                if (current_margin_level < 1.0)
+                if (current_margin_level < 1.0 && positions_.size() > 0)
                 {
-                    if (positions_.size() > 0)
-                    {
-                        close_worst_losing_position();
-                    }
-                    else if (current_equity <= 0.0)
-                    {
-                        emulation_result_.bankrupt = true;
-
-                        break;
-                    }
+                    close_worst_losing_position();
                 }
                 else
                 {
@@ -113,7 +111,9 @@ void hft_forex_emulator::proceed(void)
         tick_info = instruments_[it -> second.instrument] -> official;
         tick_info.instrument = it -> second.instrument;
 
-        handle_close_position(it -> first, tick_info, true);
+        std::string pos_id = it -> first;
+
+        handle_close_position(pos_id, tick_info, true);
     }
 }
 
