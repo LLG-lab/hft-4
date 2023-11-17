@@ -19,6 +19,7 @@
 
 #include <instrument_handler.hpp>
 #include <session_transport.hpp>
+#include <hft_session_state.hpp>
 
 #include <memory>
 #include <set>
@@ -38,12 +39,7 @@ private:
         return std::string("/var/lib/hft/sessions/") + sessid;
     }
 
-    static std::string get_default_session_data_dir(void)
-    {
-        return std::string("/etc/hft/session-defaults");
-    }
-
-    static void create_session_infrastructure(const std::string &sessid);
+    bool check_session_directory(const std::string &sessid);
 
     typedef std::map<std::string, std::shared_ptr<instrument_handler> > instrument_handler_container;
 
@@ -57,6 +53,7 @@ private:
 
     static std::set<std::string> pending_sessions_;
     std::string sessid_;
+    std::shared_ptr<session_state> pss_;
 };
 
 #endif /* __HFT_SESSION_HPP__ */

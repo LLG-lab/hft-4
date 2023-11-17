@@ -16,7 +16,7 @@ namespace hft_ih_plugin {
 xgrid::xgrid(const instrument_handler::init_info &general_config)
     : instrument_handler(general_config),
       current_state_ {state::OPERATIONAL},
-      persistent_ {false},
+      concurent_ {false},
       max_spread_ {0xFFFF},
       active_gcells_ {0},
       active_gcells_limit_ {0},
@@ -42,7 +42,7 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
     //
     //  "handler_options": {
-    //      "persistent": false,      /* Optional, default: false */
+    //      "concurent": false,      /* Optional, default: false */
     //      "transactions": {
     //          .
     //          .
@@ -172,14 +172,13 @@ void xgrid::init_handler(const boost::json::object &specific_config)
                       << "pips.";
 
 
-        if (json_exist_attribute(specific_config, "persistent"))
+        if (json_exist_attribute(specific_config, "concurent"))
         {
-            if (json_get_bool_attribute(specific_config, "persistent"))
+            if (json_get_bool_attribute(specific_config, "concurent"))
             {
-                persistent_ = true;
-                hs_.persistent();
+                concurent_ = true;
 
-                hft_log(INFO) << "init: Handler is persistent";
+                hft_log(INFO) << "init: Handler is concurent";
             }
         }
 
@@ -271,17 +270,22 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         {
             if (active_gcells_ < active_gcells_limit_)
             {
-                auto pos_id = uid();
-                market.open_long(pos_id, mmgmnt_ -> get_number_of_lots(msg.equity));
-                gcells_[index].attach_position(pos_id, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
+                double num_of_lots = mmgmnt_ -> get_number_of_lots(msg.equity);
 
-                hft_log(INFO) << "Opening position ‘"
-                              << pos_id << "’ in cell #"
-                              << gcells_[index].get_id()
-                              << ", balance before open: "
-                              << msg.equity;
+                if (num_of_lots > 0.0)
+                {
+                    auto pos_id = uid();
+                    market.open_long(pos_id, num_of_lots);
+                    gcells_[index].attach_position(pos_id, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
 
-                current_state_ = state::WAIT_FOR_STATUS;
+                    hft_log(INFO) << "Opening position ‘"
+                                  << pos_id << "’ in cell #"
+                                  << gcells_[index].get_id()
+                                  << ", balance before open: "
+                                  << msg.equity;
+
+                    current_state_ = state::WAIT_FOR_STATUS;
+                }
             }
             else
             {
@@ -556,12 +560,13 @@ void xgrid::create_money_manager(const boost::json::object &transactions)
             throw std::runtime_error(msg.c_str());
         }
 
-        mmgmnt_.reset(new money_management(mmfi, hs_));
+        mmgmnt_.reset(new money_management(mmfi));
     }
     else if (model == "PROGRESSIVE")
     {
         mm_progressive_initializer mmpi;
         mmpi.slope_ = json_get_double_attribute(transactions, "slope");
+        mmpi.remnant_svr_ = session_variable("xgrid.remnant");
 
         if (mmpi.slope_ <= 0.0)
         {
@@ -571,7 +576,7 @@ void xgrid::create_money_manager(const boost::json::object &transactions)
             throw std::runtime_error(msg.c_str());
         }
 
-        mmgmnt_.reset(new money_management(mmpi, hs_));
+        mmgmnt_.reset(new money_management(mmpi));
     }
     else
     {
@@ -668,7 +673,7 @@ void xgrid::load_grid(void)
 {
     using namespace boost::json;
 
-    if (! persistent_)
+    if (! is_persistent())
     {
         return;
     }
@@ -738,7 +743,7 @@ void xgrid::load_grid(void)
 
 void xgrid::save_grid(void)
 {
-    if (! persistent_)
+    if (! is_persistent())
     {
         return;
     }

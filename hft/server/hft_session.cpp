@@ -58,7 +58,7 @@ hft_session::~hft_session(void)
     }
 }
 
-void hft_session::create_session_infrastructure(const std::string &sessid)
+bool hft_session::check_session_directory(const std::string &sessid)
 {
     using namespace boost::filesystem;
 
@@ -70,38 +70,30 @@ void hft_session::create_session_infrastructure(const std::string &sessid)
     {
         if (is_directory(sessdir))
         {
-            //
-            // Directory for session already exist. Nothing to do.
-            //
+            hft_log(INFO) << "Found session directory ‘"
+                          << sessdir.string() << "’";
 
-            return;
+            return true;
         }
         else
         {
-            hft_log(INFO) << "session_infrastructure: Found ‘"
-                          << sessdir.string()
-                          << "’, but it's not a directory, removing\n";
-
-            remove(sessdir);
+            hft_log(ERROR) << "Not a directory ‘" << sessdir.string()
+                           << "’ – session cannot be established.";
         }
     }
-
-    if (ec)
+    else
     {
-        hft_log(ERROR) << "Raised system error: ‘" << ec.message() << "’";
+        if (ec)
+        {
+            hft_log(ERROR) << "Raised system error: ‘"
+                           << ec.message() << "’";
+        }
+
+        hft_log(ERROR) << "Not found directory ‘" << sessdir.string()
+                       << "’ – session cannot be established.";
     }
 
-    hft_log(INFO) << "infrastructure: Creating directory ‘"
-                  << sessdir.string() << "’\n";
-
-    create_directories(sessdir);
-
-    path srcdir = get_default_session_data_dir();
-
-    hft_log(INFO) << "infrastructure: Copying necessary informations to new created directory ‘"
-                  << sessdir.string() << "’\n";
-
-    copy(srcdir, sessdir, copy_options::recursive);
+    return false;    
 }
 
 
@@ -117,6 +109,19 @@ void hft_session::handle_init_request(const hft::protocol::request::init &msg, s
 
     hft::protocol::response resp;
 
+    if (! sessid_.empty())
+    {
+        hft_log(ERROR) << "Attempt to re-initialize session ‘"
+                       << sessid_ << "’ to ‘" << msg.sessid
+                       << "’";
+
+        resp.error("Forbidden reinitialize session");
+
+        response_payload = resp.serialize();
+
+        return;
+    }
+
     auto it = pending_sessions_.find(msg.sessid);
 
     if (it != pending_sessions_.end())
@@ -130,13 +135,26 @@ void hft_session::handle_init_request(const hft::protocol::request::init &msg, s
         return;
     }
 
+    if (! check_session_directory(msg.sessid))
+    {
+        resp.error("Internal server error");
+
+        response_payload = resp.serialize();
+
+        return;
+    }
+
     //
-    // Create directory for session and/or
-    // copy all necessary to it,
-    // if does not already exist.
+    // Session successfully initialized.
     //
 
-    create_session_infrastructure(msg.sessid);
+    sessid_ = msg.sessid;
+    pending_sessions_.insert(sessid_);
+    pss_.reset(new session_state(get_session_dir(sessid_)));
+
+    //
+    // Create handlers for requested instruments.
+    //
 
     for (auto &instrument : msg.instruments)
     {
@@ -148,7 +166,7 @@ void hft_session::handle_init_request(const hft::protocol::request::init &msg, s
             try
             {
                 std::shared_ptr<instrument_handler> handler;
-                handler.reset(create_instrument_handler(get_session_dir(msg.sessid), instrument));
+                handler.reset(create_instrument_handler(pss_, instrument));
                 instrument_handlers_.insert(std::pair<std::string, std::shared_ptr<instrument_handler> >(instrument, handler));
             }
             catch (std::exception &e)
@@ -165,12 +183,6 @@ void hft_session::handle_init_request(const hft::protocol::request::init &msg, s
                              << "’ already created, ignoring";
         }
     }
-
-    //
-    // Session successfully initialized.
-    //
-
-    sessid_ = msg.sessid;
 
     response_payload = resp.serialize();
 
@@ -189,6 +201,17 @@ void hft_session::handle_sync_request(const hft::protocol::request::sync &msg, s
     #endif
 
     hft::protocol::response resp {msg.instrument};
+
+    if (sessid_.empty())
+    {
+        hft_log(ERROR) << "Got SYNC request for uninitialized session.";
+
+        resp.error("Session uninitialized");
+
+        response_payload = resp.serialize();
+
+        return;
+    }
 
     //
     // Find appropriate instrument handler, then dispatch notify to it.
@@ -210,6 +233,8 @@ void hft_session::handle_sync_request(const hft::protocol::request::sync &msg, s
 
         return;
     }
+
+    auto as = pss_ -> create_autosaver();
 
     it -> second -> on_sync(msg, resp);
 
@@ -230,6 +255,17 @@ void hft_session::handle_tick_request(const hft::protocol::request::tick &msg, s
 
     hft::protocol::response resp {msg.instrument};
 
+    if (sessid_.empty())
+    {
+        hft_log(ERROR) << "Got TICK request for uninitialized session.";
+
+        resp.error("Session uninitialized");
+
+        response_payload = resp.serialize();
+
+        return;
+    }
+
     //
     // Find appropriate instrument handler, then dispatch notify to it.
     //
@@ -250,6 +286,8 @@ void hft_session::handle_tick_request(const hft::protocol::request::tick &msg, s
 
         return;
     }
+
+    auto as = pss_ -> create_autosaver();
 
     it -> second -> on_tick(msg, resp);
 
@@ -270,6 +308,17 @@ void hft_session::handle_open_notify_request(const hft::protocol::request::open_
 
     hft::protocol::response resp {msg.instrument};
 
+    if (sessid_.empty())
+    {
+        hft_log(ERROR) << "Got OPEN_NOTIFY request for uninitialized session.";
+
+        resp.error("Session uninitialized");
+
+        response_payload = resp.serialize();
+
+        return;
+    }
+
     //
     // Find appropriate instrument handler, then dispatch notify to it.
     //
@@ -290,6 +339,8 @@ void hft_session::handle_open_notify_request(const hft::protocol::request::open_
 
         return;
     }
+
+    auto as = pss_ -> create_autosaver();
 
     it -> second -> on_position_open(msg, resp);
 
@@ -310,6 +361,17 @@ void hft_session::handle_close_notify_request(const hft::protocol::request::clos
 
     hft::protocol::response resp {msg.instrument};
 
+    if (sessid_.empty())
+    {
+        hft_log(ERROR) << "Got CLOSE_NOTIFY request for uninitialized session.";
+
+        resp.error("Session uninitialized");
+
+        response_payload = resp.serialize();
+
+        return;
+    }
+
     //
     // Find appropriate instrument handler, then dispatch notify to it.
     //
@@ -330,6 +392,8 @@ void hft_session::handle_close_notify_request(const hft::protocol::request::clos
 
         return;
     }
+
+    auto as = pss_ -> create_autosaver();
 
     it -> second -> on_position_close(msg, resp);
 

@@ -68,6 +68,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/server/include/custom_except.hpp
      ${PROJECT_SOURCE_DIR}/server/include/deallocator.hpp
      ${PROJECT_SOURCE_DIR}/server/include/synchronized_queue.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/svr.hpp
      ${PROJECT_SOURCE_DIR}/server/include/thread_worker.hpp
      ${PROJECT_SOURCE_DIR}/server/include/utilities.hpp
      ${PROJECT_SOURCE_DIR}/server/include/curlpp.hpp
@@ -81,6 +82,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/server/include/basic_tcp_server.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_server_config.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_session.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/hft_session_state.hpp
      ${PROJECT_SOURCE_DIR}/server/include/trade_time_frame.hpp
      ${PROJECT_SOURCE_DIR}/server/include/instrument_handler.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_handler_resource.hpp
@@ -101,6 +103,7 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/main.cpp
      ${PROJECT_SOURCE_DIR}/draft_main.cpp
      ${PROJECT_SOURCE_DIR}/server/deallocator.cpp
+     ${PROJECT_SOURCE_DIR}/server/svr.cpp
      ${PROJECT_SOURCE_DIR}/server/utilities.cpp
      ${PROJECT_SOURCE_DIR}/server/curlpp.cpp
      ${PROJECT_SOURCE_DIR}/server/sms_alert.cpp
@@ -113,6 +116,7 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/server/hft_response.cpp
      ${PROJECT_SOURCE_DIR}/server/session_transport.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_session.cpp
+     ${PROJECT_SOURCE_DIR}/server/hft_session_state.cpp
      ${PROJECT_SOURCE_DIR}/server/trade_time_frame.cpp
      ${PROJECT_SOURCE_DIR}/server/instrument_handler.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_handler_resource.cpp

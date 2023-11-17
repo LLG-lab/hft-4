@@ -1,7 +1,7 @@
 #ifndef __MONEY_MANAGEMENT_HPP__
 #define __MONEY_MANAGEMENT_HPP__
 
-#include <hft_handler_resource.hpp>
+#include <svr.hpp>
 
 struct mm_flat_initializer
 {
@@ -20,6 +20,7 @@ struct mm_progressive_initializer
     //
 
     double slope_;
+    svr remnant_svr_;
 };
 
 class money_management
@@ -30,8 +31,8 @@ public:
     money_management(money_management &) = delete;
     money_management(money_management &&) = delete;
 
-    money_management(mm_flat_initializer &mmfi, hft_handler_resource &hs);
-    money_management(mm_progressive_initializer &mmpi, hft_handler_resource &hs);
+    money_management(mm_flat_initializer &mmfi);
+    money_management(mm_progressive_initializer &mmpi);
 
     ~money_management(void) = default;
 
@@ -46,13 +47,13 @@ private:
     };
 
     mm_mode mode_;
-    hft_handler_resource &hs_;
 
     // Mode flat.
     double number_of_lots_;
 
     // Mode progressive.
     double slope_;
+    svr remnant_svr_;
 };
 
 #endif /* __MONEY_MANAGEMENT_HPP__ */

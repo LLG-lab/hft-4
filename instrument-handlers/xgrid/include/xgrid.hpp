@@ -39,6 +39,7 @@ private:
 
     bool profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const;
     int  get_precedessor_position_index(int index) const;
+    bool is_persistent(void) const { return (get_session_mode() == session_mode::PERSISTENT); }
 
     enum class state
     {
@@ -47,7 +48,7 @@ private:
     };
 
     state current_state_;
-    bool persistent_;
+    bool concurent_;  // if set, xgrid handlers for various instruments works mutualy excluded on the same balance.
     int max_spread_;
     int active_gcells_;
     int active_gcells_limit_;

@@ -310,7 +310,7 @@ static instrument_handler_ptr import_instrument_handler_from_plugin(const std::s
 // Instrument handler factory routine.
 //
 
-instrument_handler_ptr create_instrument_handler(const std::string &session_dir, const std::string &instrument)
+instrument_handler_ptr create_instrument_handler(std::shared_ptr<session_state> pss, const std::string &instrument)
 {
     using namespace boost::json;
 
@@ -318,7 +318,8 @@ instrument_handler_ptr create_instrument_handler(const std::string &session_dir,
 
     handler_info.ticker = instrument;
     handler_info.ticker_fmt2 = boost::erase_all_copy(instrument, "/");
-    handler_info.work_dir = session_dir + std::string("/") + handler_info.ticker_fmt2;
+    handler_info.work_dir = pss -> get_session_directory() + std::string("/") + handler_info.ticker_fmt2;
+    handler_info.pss = pss;
 
     std::string manifest = handler_info.work_dir + std::string("/manifest.json");
 

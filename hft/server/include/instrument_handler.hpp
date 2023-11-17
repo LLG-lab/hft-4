@@ -20,8 +20,11 @@
 #include <hft_request.hpp>
 #include <hft_response.hpp>
 #include <hft_handler_resource.hpp>
+#include <hft_session_state.hpp>
 
 #include <trade_time_frame.hpp>
+
+class session_state;
 
 //
 // Instrument handler base class.
@@ -33,6 +36,7 @@ public:
 
     struct init_info
     {
+        std::shared_ptr<session_state> pss;
         std::string ticker;
         std::string description;
         std::string ticker_fmt2;
@@ -64,17 +68,18 @@ public:
     virtual void on_position_open(const hft::protocol::request::open_notify &msg, hft::protocol::response &market) = 0;
     virtual void on_position_close(const hft::protocol::request::close_notify &msg, hft::protocol::response &market) = 0;
 
+    std::string get_ticker(void) const { return handler_informations_.ticker; }
+    std::string get_ticker_fmt2(void) const { return handler_informations_.ticker_fmt2; }
+    std::string get_instrument_description(void) const { return handler_informations_.description; }
+
 protected:
 
     //
     // Access methods to handler informations.
     //
 
-    std::string get_ticker(void) const { return handler_informations_.ticker; }
-    std::string get_ticker_fmt2(void) const { return handler_informations_.ticker_fmt2; }
     std::string get_work_dir(void) const { return handler_informations_.work_dir; }
     std::string get_logger_id(void) const { return std::string("handler_") + get_ticker_fmt2(); }
-    std::string get_instrument_description(void) const { return handler_informations_.description; }
     int floating2pips(double price) const;
     double pips2floating(int pips) const;
     static std::string uid(void);
@@ -93,6 +98,13 @@ protected:
     static const boost::json::object &json_get_object_attribute(const boost::json::object &obj, const std::string &attr_name);
 
     //
+    // Session state methods.
+    //
+
+    session_mode get_session_mode(void) const { return handler_informations_.pss -> get_mode(); }
+    svr session_variable(const std::string &name, varscope scope = varscope::LOCAL) { return handler_informations_.pss -> variable(this, name, scope); }
+
+    //
     // Extra.
     //
 
@@ -101,7 +113,8 @@ protected:
     void file_put_contents(const std::string &filename, const std::string &content);
 
     //
-    //  Handler state keeper.
+    // Handler state keeper. Obsolete now.
+    // Session variables are now recomended.
     //
 
     hft_handler_resource hs_;
@@ -117,6 +130,6 @@ typedef instrument_handler *instrument_handler_ptr;
 // Instrument handler factory function.
 //
 
-instrument_handler_ptr create_instrument_handler(const std::string &session_dir, const std::string &instrument);
+instrument_handler_ptr create_instrument_handler(std::shared_ptr<session_state> pss, const std::string &instrument);
 
 #endif /*  __INSTRUMENT_HANDLER_HPP__ */
