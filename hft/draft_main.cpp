@@ -85,6 +85,6 @@ int draft_main(int argc, char *argv[])
     std::cout << "            return 0;\n";
     std::cout << "    }\n";
     std::cout << "}\n";
-    
+
     return 0;
 }

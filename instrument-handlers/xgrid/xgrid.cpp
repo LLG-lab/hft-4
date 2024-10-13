@@ -21,6 +21,8 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
       active_gcells_ {0},
       active_gcells_limit_ {0},
       dayswap_pips_ {0.0},
+      sellout_ {false},
+      immediate_money_supply_ {0.0},
       used_cells_alarm_ {0},
       user_alarmed_ {false},
       positions_confirmed_ {false},
@@ -52,6 +54,8 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     //      "dayswap_pips":-0.3,
     //      "active_gcells_limit":10, /* Optional, default: gcells */
     //      "used_cells_alarm":20,    /* Optional, default: 0 (disabled) */
+    //      "sellout":false,          /* Optional, default: false */
+    //      "immediate_money_supply":0.0,
     //      "grid_definition": {
     //           .
     //           .
@@ -115,6 +119,32 @@ void xgrid::init_handler(const boost::json::object &specific_config)
             hft_log(INFO) << "init: User will be notified when the "
                           << used_cells_alarm_ << "th position is opened.";
         }
+
+        if (json_exist_attribute(specific_config, "sellout"))
+        {
+			sellout_ = json_get_bool_attribute(specific_config, "sellout");
+
+			if (sellout_)
+			{
+				hft_log(INFO) << "init: SELLOUT mode enabled, no new "
+				              << "positions will be opened.";
+			}
+		}
+
+        if (json_exist_attribute(specific_config, "immediate_money_supply"))
+        {
+			immediate_money_supply_ = json_get_double_attribute(specific_config, "immediate_money_supply");
+
+            if (immediate_money_supply_ < 0.0)
+            {
+				std::string msg = "Attribute ‘immediate_money_supply’ must be ≥ 0, got "
+                                  + std::to_string(immediate_money_supply_);
+
+                throw std::runtime_error(msg.c_str());
+			}
+
+            hft_log(INFO) << "init: IMS is " << immediate_money_supply_;
+		}
 
         const boost::json::object &grid_def = json_get_object_attribute(specific_config, "grid_definition");
 
@@ -268,9 +298,10 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
         if (precedessor_index < 0) // Conditions (I).
         {
-            if (active_gcells_ < active_gcells_limit_)
+            if (active_gcells_ < active_gcells_limit_ && !sellout_)
             {
-                double num_of_lots = mmgmnt_ -> get_number_of_lots(msg.equity);
+				double bankroll = msg.equity + immediate_money_supply_;
+                double num_of_lots = mmgmnt_ -> get_number_of_lots(bankroll);
 
                 if (num_of_lots > 0.0)
                 {
@@ -282,7 +313,9 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
                                   << pos_id << "’ in cell #"
                                   << gcells_[index].get_id()
                                   << ", balance before open: "
-                                  << msg.equity;
+                                  << msg.equity
+                                  << ", whole money including IMS: "
+                                  << bankroll;
 
                     current_state_ = state::WAIT_FOR_STATUS;
                 }

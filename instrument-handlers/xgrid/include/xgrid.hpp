@@ -48,11 +48,13 @@ private:
     };
 
     state current_state_;
-    bool concurent_;  // if set, xgrid handlers for various instruments works mutualy excluded on the same balance.
+    bool concurent_;  // If set, xgrid handlers for various instruments works mutualy excluded on the same balance.
     int max_spread_;
     int active_gcells_;
     int active_gcells_limit_;
     double dayswap_pips_;
+    bool sellout_; // If set, xgrid handler will only sell existing positions.
+    double immediate_money_supply_; // Capital outside the brokerage account, ready for immediate replenishment.
 
     //
     // Stuff for alarming purpose when
