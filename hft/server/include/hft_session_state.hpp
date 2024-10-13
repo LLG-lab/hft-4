@@ -41,11 +41,13 @@ public:
     class autosaver
     {
     public:
+
         autosaver(void) = delete;
-        autosaver(const autosaver &) = delete;
         autosaver(session_state *pss) : pss_ {pss} {}
         ~autosaver(void) { pss_ -> save(); }
+
     private:
+
         session_state *pss_;
     };
 
@@ -76,5 +78,7 @@ private:
 
     std::map<std::string, std::map<std::string, std::string>> variables_;
 };
+
+
 
 #endif /* __HFT_SESSION_STATE_HPP__ */

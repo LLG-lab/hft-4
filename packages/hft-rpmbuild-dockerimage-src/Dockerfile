@@ -2,8 +2,14 @@ FROM centos:centos7
 ARG BOOST_DIR=boost_1_81_0
 ARG BOOST_TARBALL=boost_1_81_0.tar.bz2
 ARG BOOST_URL=https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/$BOOST_TARBALL
+RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/CentOS-*.repo
+RUN sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/CentOS-*.repo
+RUN sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/CentOS-*.repo
 RUN yum -y update
 RUN yum -y install centos-release-scl
+RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/CentOS-*.repo
+RUN sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/CentOS-*.repo
+RUN sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/CentOS-*.repo
 RUN yum -y install \
       wget \
       make \
@@ -18,8 +24,8 @@ RUN yum -y install \
       maven \
       protobuf-devel \
       protobuf-compiler \
-      devtoolset-7-gcc* && \
-    pushd /tmp > /dev/null && \
+      devtoolset-7-gcc*
+RUN pushd /tmp > /dev/null && \
     wget https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz && \
     tar -zxf cmake-3.17.3.tar.gz && \
     cd cmake-3.17.3 && \
