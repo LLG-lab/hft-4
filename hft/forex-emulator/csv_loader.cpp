@@ -59,7 +59,7 @@ void csv_loader::load(const std::string &file_name)
 
     infile_.open(file_name.c_str(), std::ifstream::in);
 
-    if (!infile_.is_open())
+    if (! infile_.is_open())
     {
         std::ostringstream error_msg;
 
@@ -67,6 +67,8 @@ void csv_loader::load(const std::string &file_name)
 
         throw csv_exception(error_msg.str());
     }
+
+    filesize_ = get_filesize();
 }
 
 bool csv_loader::get_record(csv_loader::csv_record &out_rec)
@@ -211,6 +213,19 @@ start_readline:
     return true;
 }
 
+int csv_loader::get_progress(void) const
+{
+	if (filesize_ == 0)
+	{
+		return 100;
+	}
+
+	double ratio = get_record_position();
+    ratio /= filesize_;
+
+    return ratio*100;
+}
+
 long csv_loader::get_record_position(void) const
 {
     return infile_.tellg();
@@ -220,6 +235,17 @@ void csv_loader::set_record_position(long position)
 {
     infile_.clear();
     infile_.seekg(position);
+}
+
+long csv_loader::get_filesize(void) const
+{
+	long result = 0;
+
+    infile_.seekg (0, infile_.end);
+    result = infile_.tellg();
+    infile_.seekg (0, infile_.beg);
+
+    return result;
 }
 
 int csv_loader::validate_range(const char *topic, int value, int min, int max)

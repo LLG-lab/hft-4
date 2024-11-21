@@ -76,3 +76,8 @@ bool csv_data_supplier::get_record(csv_record &out_rec)
         csv_loader_.load(*current_name_it_);
     }
 }
+
+int csv_data_supplier::get_progress(void) const
+{
+	return csv_loader_.get_progress();
+}

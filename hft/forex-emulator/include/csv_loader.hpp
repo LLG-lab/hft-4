@@ -43,13 +43,15 @@ public:
         double bid_volume;
     };
 
-    csv_loader(void) = default;
+    csv_loader(void) : filesize_ {0} {}
     csv_loader(const std::string &file_name);
     ~csv_loader(void);
 
     void load(const std::string &file_name);
 
     bool get_record(csv_record &out_rec);
+
+    int get_progress(void) const;
 
     //
     // Auxiliary methods for rewind purposes.
@@ -59,6 +61,8 @@ public:
     void set_record_position(long position);
 
 private:
+
+    long get_filesize(void) const;
 
     static int validate_range(const char *topic, int value, int min, int max);
 
@@ -85,6 +89,7 @@ private:
     };
 
     mutable std::ifstream infile_;
+    long filesize_;
 };
 
 #endif /* __CSV_LOADER_HPP__ */

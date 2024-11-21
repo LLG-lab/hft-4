@@ -136,6 +136,8 @@ private:
 
     void proceed(void);
 
+    std::string get_progress_str(void) const;
+
     void close_worst_losing_position(void);
 
     bool get_record(tick_record &tick);

@@ -14,6 +14,7 @@
 **                                                                    **
 \**********************************************************************/
 
+#include <unistd.h>
 #include <limits>
 
 #include <hft_forex_emulator.hpp>
@@ -48,10 +49,18 @@ void hft_forex_emulator::proceed(void)
     double current_free_margin;
     double current_margin_level;
 
+    int record_number = 0;
+    bool is_tty_output = ::isatty(::fileno(stdout));
+
     while (get_record(tick_info))
     {
         while (true)
         {
+			if (is_tty_output && (record_number++ % 1000 == 0))
+			{
+				std::cout << get_progress_str() << "\r" << std::flush;
+			}
+
             current_equity = get_equity_at_moment();
             current_free_margin = get_free_margin_at_moment(current_equity);
 
@@ -94,7 +103,7 @@ void hft_forex_emulator::proceed(void)
     }
 
     //
-    // Data end. Close opened positions forcibly.
+    // Data end or bankrupt. Close opened positions forcibly.
     //
 
     forbid_new_positions_ = true;
@@ -115,6 +124,19 @@ void hft_forex_emulator::proceed(void)
 
         handle_close_position(pos_id, tick_info, true);
     }
+}
+
+std::string hft_forex_emulator::get_progress_str(void) const
+{
+	std::string result;
+
+    for (auto &item : instruments_)
+    {
+		result += std::to_string(item.second -> csv_faucet.get_progress());
+		result += std::string("% ");
+	}
+
+    return result;
 }
 
 void hft_forex_emulator::close_worst_losing_position(void)

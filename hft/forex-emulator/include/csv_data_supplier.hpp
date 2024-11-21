@@ -33,6 +33,8 @@ public:
 
     bool get_record(csv_record &out_rec);
 
+    int get_progress(void) const;
+
 private:
 
     csv_loader csv_loader_;
