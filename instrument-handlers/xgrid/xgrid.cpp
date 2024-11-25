@@ -17,6 +17,7 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
     : instrument_handler(general_config),
       current_state_ {state::OPERATIONAL},
       concurent_ {false},
+      internal_position_transferring_ {false},
       max_spread_ {0xFFFF},
       active_gcells_ {0},
       active_gcells_limit_ {0},
@@ -44,7 +45,8 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
     //
     //  "handler_options": {
-    //      "concurent": false,      /* Optional, default: false */
+    //      "concurent": false,                      /* Optional, default: false */
+    //      "internal_position_transferring": false, /* Optional, default: false */
     //      "transactions": {
     //          .
     //          .
@@ -67,6 +69,11 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     try
     {
         const boost::json::object &transactions = json_get_object_attribute(specific_config, "transactions");
+
+        if (json_exist_attribute(specific_config, "internal_position_transferring"))
+        {
+            internal_position_transferring_ = json_get_bool_attribute(specific_config, "internal_position_transferring");
+        }
 
         create_money_manager(transactions);
 
@@ -331,14 +338,17 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         }
         else  // Condition (II).
         {
-            auto pos_id = gcells_[precedessor_index].get_position_id();
-            gcells_[index].reloc_position(gcells_[precedessor_index]);
+			if (internal_position_transferring_)
+			{
+                auto pos_id = gcells_[precedessor_index].get_position_id();
+                gcells_[index].reloc_position(gcells_[precedessor_index]);
 
-            hft_log(INFO) << "Internal transfered position ‘" << pos_id
-                          << "’: #" << gcells_[precedessor_index].get_id()
-                          << " → #" << gcells_[index].get_id() << ".";
+                hft_log(INFO) << "Internal transfered position ‘" << pos_id
+                              << "’: #" << gcells_[precedessor_index].get_id()
+                              << " → #" << gcells_[index].get_id() << ".";
 
-            save_grid();
+                save_grid();
+		    }
         }
     }
 
