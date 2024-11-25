@@ -55,14 +55,15 @@ cd "$SELF_DIR"
 if ! exists_generator_docker_image ; then
     echo "Docker image ‘hft4-deb-generator-ubuntu22’ must be generated, now proceeding..."
     pushd hft-debbuild-dockerimage-src > /dev/null
-    docker build -t hft4-deb-generator-ubuntu22 . || error "Failed to generate docker image ‘hft4-rpm-generator-centos7’"
+    docker build -t hft4-deb-generator-ubuntu22 . || error "Failed to generate docker image ‘hft4-deb-generator-ubuntu22’"
     popd > /dev/null
 fi
 
 ## Put project into exchange volume.
 pushd ../ > /dev/null
 mkdir -p ${SELF_DIR}/exchange/SOURCES
-tar -cf ${SELF_DIR}/exchange/SOURCES/hft-project.tar --exclude-from=.gitignore *
+grep -v "draft_main.cpp" .gitignore > /tmp/tarignore
+tar -cf ${SELF_DIR}/exchange/SOURCES/hft-project.tar --exclude-from=/tmp/tarignore *
 popd > /dev/null
 
 ## Start job inside docker container.

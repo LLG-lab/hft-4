@@ -62,7 +62,8 @@ fi
 ## Put project into exchange volume.
 pushd ../ > /dev/null
 mkdir -p ${SELF_DIR}/exchange/SOURCES
-tar -cf ${SELF_DIR}/exchange/SOURCES/hft-project.tar --exclude-from=.gitignore *
+grep -v "draft_main.cpp" .gitignore > /tmp/tarignore
+tar -cf ${SELF_DIR}/exchange/SOURCES/hft-project.tar --exclude-from=/tmp/tarignore *
 popd > /dev/null
 
 ## Start job inside docker container.
