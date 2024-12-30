@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -145,7 +145,7 @@ void hft2ctrader_config::xml_parse(const std::string &xml_file_name)
 
     //
     // <market bridge="IC Markets" sessid="icmarkets-session" >
-	//     <auth account="demo">
+    //     <auth account="demo">
     //         <client-id>XXXXXXX</client-id>
     //         <client-secret>XXXXXX</client-secret>
     //         <access-token>XXXXXX</access-token>

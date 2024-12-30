@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -46,7 +46,7 @@ proxy_core::proxy_core(ctrader_ssl_connection &ctrader_conn, hft_connection &hft
       registration_timestamp_ {0ul},
       hw_ {hw}
 {
-   el::Loggers::getLogger("session", true);
+    el::Loggers::getLogger("session", true);
 }
 
 //
@@ -314,7 +314,7 @@ void proxy_core::dispatch_ctrader_data_event(ctrader_data_event const &event)
             last_heartbeat_ = now;
 
             hw_.notify();
-        
+
             break;
         }
         case PROTO_OA_ACCOUNT_DISCONNECT_EVENT:
@@ -612,47 +612,47 @@ void proxy_core::arrange_position(const ProtoOAPosition &pos, bool historical)
 /*
   Field                  Type                        Label         Description
 -------------------------------------------------------------------------------------------------------------------
-positionid	            int64	                    required	The unique ID of the position. Note: trader might have
-                                                                two positions with the same id if positions are taken
-                                                                from accounts from different brokers.
-                                                                ---
-tradedata	            ProtoOATradeData	        required	Position details. See ProtoOATradeData for details.
-                                                                --- 
-positiondtatus	        ProtoOAPositionStatus	    required	Current status of the position.
-                                                                ---
-swap	                int64	                    required	Total amount of charged swap on open position.
-                                                                ---
-price	                double	                    optional	VWAP price of the position based on all executions
-                                                                (orders) linked to the position.
-                                                                ---
-stoploss	            double	                    optional	Current stop loss price.
-                                                                --- 
-takeprofit	            double	                    optional	Current take profit price.
-                                                                ---
-utclastupdatetimestamp	int64	                    optional	Time of the last change of the position, including
-                                                                amend SL/TP of the position, execution of related
-                                                                order, cancel or related order, etc.
-                                                                ---
-commission	            int64	                    optional	Current unrealized commission related to the position.
-                                                                ---
-marginrate	            double	                    optional	Rate for used margin computation. Represented as Base/Deposit.
-                                                                ---
-mirroringcommission	    int64	                    optional	Amount of unrealized commission related to
+positionid               int64                       required    The unique ID of the position. Note: trader might have
+                                                                 two positions with the same id if positions are taken
+                                                                 from accounts from different brokers.
+                                                                 ---
+tradedata                ProtoOATradeData            required    Position details. See ProtoOATradeData for details.
+                                                                 ---
+positiondtatus           ProtoOAPositionStatus       required    Current status of the position.
+                                                                 ---
+swap                     int64                       required    Total amount of charged swap on open position.
+                                                                 ---
+price                    double                      optional    VWAP price of the position based on all executions
+                                                                 (orders) linked to the position.
+                                                                 ---
+stoploss                 double                      optional    Current stop loss price.
+                                                                 ---
+takeprofit               double                      optional    Current take profit price.
+                                                                 ---
+utclastupdatetimestamp   int64                       optional    Time of the last change of the position, including
+                                                                 amend SL/TP of the position, execution of related
+                                                                 order, cancel or related order, etc.
+                                                                 ---
+commission               int64                       optional   Current unrealized commission related to the position.
+                                                                 ---
+marginrate               double                      optional   Rate for used margin computation. Represented as Base/Deposit.
+                                                                 ---
+mirroringcommission      int64                       optional   Amount of unrealized commission related to
                                                                 following of strategy provider.
                                                                 ---
-guaranteedstoploss	    bool	                    optional	If TRUE then position's stop loss is guaranteedStopLoss.
+guaranteedstoploss       bool                        optional   If TRUE then position's stop loss is guaranteedStopLoss.
                                                                 ---
-usedmargin	            uint64	                    optional	Amount of margin used for the position in deposit currency.
+usedmargin               uint64                      optional   Amount of margin used for the position in deposit currency.
                                                                 ---
-stoplosstriggermethod	ProtoOAOrderTriggerMethod	optional	Stop trigger method for SL/TP of the position. Default: TRADE
+stoplosstriggermethod    ProtoOAOrderTriggerMethod   optional   Stop trigger method for SL/TP of the position. Default: TRADE
                                                                 ---
-moneydigits	            uint32	                    optional	Specifies the exponent of the monetary values.
+moneydigits              uint32                      optional   Specifies the exponent of the monetary values.
                                                                 E.g. moneyDigits = 8 must be interpret as business
                                                                 value multiplied by 10^8, then real balance
                                                                 would be 10053099944 / 10^8 = 100.53099944.
                                                                 Affects swap, commission, mirroringCommission, usedMargin.
                                                                 ---
-trailingstoploss	    bool	                    optional	If TRUE then the Trailing Stop Loss is applied.
+trailingstoploss         bool                        optional   If TRUE then the Trailing Stop Loss is applied.
 */
 
     pinfo.position_id_ = pos.positionid();
@@ -666,19 +666,19 @@ trailingstoploss	    bool	                    optional	If TRUE then the Trailing
 /*
    Field               Type              Label       Description
 ------------------------------------------------------------------------
-symbolid	          int64             required   The unique identifier of the symbol in specific server
+symbolid              int64             required   The unique identifier of the symbol in specific server
                                                    environment within cTrader platform. Different brokers
                                                    might have different IDs.
                                                    ---
-volume	              int64             required   Volume in cents.
+volume                int64             required   Volume in cents.
                                                    ---
-tradeside	          ProtoOATradeSide  required   Buy, Sell.
+tradeside             ProtoOATradeSide  required   Buy, Sell.
                                                    ---
 opentimestamp         int64             optional   Time when position was opened or order was created.
                                                    ---
 label                 string            optional   Text label specified during order request.
                                                    ---
-guaranteedstoploss	  bool              optional   If TRUE then position/order stop loss is guaranteedStopLoss.
+guaranteedstoploss    bool              optional   If TRUE then position/order stop loss is guaranteedStopLoss.
                                                    ---
 comment               string            optional   User-specified comment.
 
@@ -1211,27 +1211,27 @@ bool proxy_core::ctrader_create_market_order_ex(const std::string &identifier, c
 
 bool proxy_core::ctrader_close_position_ex(const std::string &identifier)
 {
-   bool status = false;
+    bool status = false;
 
-   for (auto &p : positions_)
-   {
-       if (p.label_ == identifier)
-       {
-           status = true;
+    for (auto &p : positions_)
+    {
+        if (p.label_ == identifier)
+        {
+            status = true;
 
-           ctrader_close_position(p.position_id_, p.volume_ * 100, config_.get_auth_account_id());
+            ctrader_close_position(p.position_id_, p.volume_ * 100, config_.get_auth_account_id());
 
-           break;
-       }
-   }
+            break;
+        }
+    }
 
-   if (! status)
-   {
-        hft2ctrader_log(ERROR) << "ctrader_close_position_ex: Position identified as ‘"
-                               << identifier << "’ was not found.";
-   }
+    if (! status)
+    {
+         hft2ctrader_log(ERROR) << "ctrader_close_position_ex: Position identified as ‘"
+                                << identifier << "’ was not found.";
+    }
 
-   return status;
+    return status;
 }
 
 //
@@ -1417,47 +1417,47 @@ void display_protooaposition(const ProtoOAPosition &pos, const std::string &prep
 /*
   Field                  Type                        Label         Description
 -------------------------------------------------------------------------------------------------------------------
-positionid	            int64	                    required	The unique ID of the position. Note: trader might have
+positionid               int64                      required    The unique ID of the position. Note: trader might have
                                                                 two positions with the same id if positions are taken
                                                                 from accounts from different brokers.
                                                                 ---
-tradedata	            ProtoOATradeData	        required	Position details. See ProtoOATradeData for details.
-                                                                --- 
-positiondtatus	        ProtoOAPositionStatus	    required	Current status of the position.
+tradedata                ProtoOATradeData           required    Position details. See ProtoOATradeData for details.
                                                                 ---
-swap	                int64	                    required	Total amount of charged swap on open position.
+positiondtatus           ProtoOAPositionStatus      required    Current status of the position.
                                                                 ---
-price	                double	                    optional	VWAP price of the position based on all executions
+swap                     int64                      required    Total amount of charged swap on open position.
+                                                                ---
+price                    double                     optional    VWAP price of the position based on all executions
                                                                 (orders) linked to the position.
                                                                 ---
-stoploss	            double	                    optional	Current stop loss price.
-                                                                --- 
-takeprofit	            double	                    optional	Current take profit price.
+stoploss                 double                     optional    Current stop loss price.
                                                                 ---
-utclastupdatetimestamp	int64	                    optional	Time of the last change of the position, including
+takeprofit               double                     optional    Current take profit price.
+                                                                ---
+utclastupdatetimestamp   int64                      optional    Time of the last change of the position, including
                                                                 amend SL/TP of the position, execution of related
                                                                 order, cancel or related order, etc.
                                                                 ---
-commission	            int64	                    optional	Current unrealized commission related to the position.
+commission               int64                      optional    Current unrealized commission related to the position.
                                                                 ---
-marginrate	            double	                    optional	Rate for used margin computation. Represented as Base/Deposit.
+marginrate               double                     optional    Rate for used margin computation. Represented as Base/Deposit.
                                                                 ---
-mirroringcommission	    int64	                    optional	Amount of unrealized commission related to
+mirroringcommission      int64                      optional    Amount of unrealized commission related to
                                                                 following of strategy provider.
                                                                 ---
-guaranteedstoploss	    bool	                    optional	If TRUE then position's stop loss is guaranteedStopLoss.
+guaranteedstoploss       bool                       optional    If TRUE then position's stop loss is guaranteedStopLoss.
                                                                 ---
-usedmargin	            uint64	                    optional	Amount of margin used for the position in deposit currency.
+usedmargin               uint64                     optional    Amount of margin used for the position in deposit currency.
                                                                 ---
-stoplosstriggermethod	ProtoOAOrderTriggerMethod	optional	Stop trigger method for SL/TP of the position. Default: TRADE
+stoplosstriggermethod    ProtoOAOrderTriggerMethod  optional    Stop trigger method for SL/TP of the position. Default: TRADE
                                                                 ---
-moneydigits	            uint32	                    optional	Specifies the exponent of the monetary values.
+moneydigits              uint32                     optional    Specifies the exponent of the monetary values.
                                                                 E.g. moneyDigits = 8 must be interpret as business
                                                                 value multiplied by 10^8, then real balance
                                                                 would be 10053099944 / 10^8 = 100.53099944.
                                                                 Affects swap, commission, mirroringCommission, usedMargin.
                                                                 ---
-trailingstoploss	    bool	                    optional	If TRUE then the Trailing Stop Loss is applied.
+trailingstoploss         bool                       optional    If TRUE then the Trailing Stop Loss is applied.
 */
     hft2ctrader_log(DEBUG) << prepend << "positionId: " << pos.positionid();
     hft2ctrader_log(DEBUG) << prepend << "tradeData:";
@@ -1588,21 +1588,21 @@ void display_tradedata(const ProtoOATradeData &tradedata, const std::string &pre
 /*
    Field               Type              Label       Description
 ------------------------------------------------------------------------
-symbolid	          int64             required   The unique identifier of the symbol in specific server
-                                                   environment within cTrader platform. Different brokers
-                                                   might have different IDs.
-                                                   ---
-volume	              int64             required   Volume in cents.
-                                                   ---
-tradeside	          ProtoOATradeSide  required   Buy, Sell.
-                                                   ---
-opentimestamp         int64             optional   Time when position was opened or order was created.
-                                                   ---
-label                 string            optional   Text label specified during order request.
-                                                   ---
-guaranteedstoploss	  bool              optional   If TRUE then position/order stop loss is guaranteedStopLoss.
-                                                   ---
-comment               string            optional   User-specified comment.
+symbolid               int64             required   The unique identifier of the symbol in specific server
+                                                    environment within cTrader platform. Different brokers
+                                                    might have different IDs.
+                                                    ---
+volume                 int64             required   Volume in cents.
+                                                    ---
+tradeside              ProtoOATradeSide  required   Buy, Sell.
+                                                    ---
+opentimestamp          int64             optional   Time when position was opened or order was created.
+                                                    ---
+label                  string            optional   Text label specified during order request.
+                                                    ---
+guaranteedstoploss     bool              optional   If TRUE then position/order stop loss is guaranteedStopLoss.
+                                                    ---
+comment                string            optional   User-specified comment.
 
 */
     hft2ctrader_log(DEBUG) << prepend << "symbolId: " << tradedata.symbolid();
@@ -1743,7 +1743,7 @@ stopTriggerMethod      ProtoOAOrderTriggerMethod    optional    Trigger method f
     switch (order.orderstatus())
     {
         case ORDER_STATUS_ACCEPTED:
-	        // Order request validated and accepted for execution.
+            // Order request validated and accepted for execution.
             hft2ctrader_log(DEBUG) << prepend << "orderStatus: ORDER_STATUS_ACCEPTED";
             break;
 
@@ -1951,15 +1951,15 @@ tradeSide                  ProtoOATradeSide              required    Buy/Sell.
                                                                      ---
 dealStatus                 ProtoOADealStatus             required    Status of the deal.
                                                                      ---
-marginRate                 double	                     optional    Rate for used margin computation. Represented as Base/Deposit.
+marginRate                 double                        optional    Rate for used margin computation. Represented as Base/Deposit.
                                                                      ---
-commission                 int64	                     optional    Amount of trading commission associated with the deal.
+commission                 int64                         optional    Amount of trading commission associated with the deal.
                                                                      ---
-baseToUsdConversionRate    double	                     optional    Base to USD conversion rate on the time of deal execution.
+baseToUsdConversionRate    double                        optional    Base to USD conversion rate on the time of deal execution.
                                                                      ---
 closePositionDetail        ProtoOAClosePositionDetail    optional    Closing position detail. Valid only for closing deal.
                                                                      ---
-moneyDigits                uint32	                     optional    Specifies the exponent of the monetary values. E.g. moneyDigits = 8
+moneyDigits                uint32                        optional    Specifies the exponent of the monetary values. E.g. moneyDigits = 8
                                                                      must be interpret as business value multiplied by 10^8, then real
                                                                      balance would be 10053099944 / 10^8 = 100.53099944. Affects commission.
 */

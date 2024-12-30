@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -46,10 +46,10 @@ static struct
     program start_program;
 
 } hft_programs[] = {
-    { .tool_name = "draft",                    .start_program = &draft_main },
-    { .tool_name = "server",                   .start_program = &hft_server_main },
-    { .tool_name = "forex-emulator",       .start_program = &hft_dukasemu_main },
-    { .tool_name = "instrument-stats",         .start_program = &hft_instrument_stats }
+    { .tool_name = "draft",            .start_program = &draft_main },
+    { .tool_name = "server",           .start_program = &hft_server_main },
+    { .tool_name = "forex-emulator",   .start_program = &hft_dukasemu_main },
+    { .tool_name = "instrument-stats", .start_program = &hft_instrument_stats }
 };
 
 int main(int argc, char *argv[])
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     try
     {
         std::cout << "High Frequency Trading System - Professional Expert Advisor, version " << hft_version() << "\n";
-        std::cout << " Copyright © 2017 - 2024 by LLG Ryszard Gradowski, All Rights Reserved.\n\n";
+        std::cout << " Copyright © 2017 - 2025 by LLG Ryszard Gradowski, All Rights Reserved.\n\n";
 
         if (argc == 1 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
         {

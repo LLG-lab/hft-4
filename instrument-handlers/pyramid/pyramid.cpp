@@ -326,7 +326,7 @@ void pyramid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::re
         {
             hft_log(INFO) << "Will now liquidate pyramid with n="
                           << n << " positions.";
-            
+
             liquidate_pyramid_ = true;
             return;
         }
@@ -609,7 +609,7 @@ void pyramid::create_grid(const boost::json::object &grid_def)
 
             throw std::runtime_error(msg.c_str());
         }
-        
+
         end_price_pips = start_price_pips + cell_types[architecture[i]].first;
         terminal = cell_types[architecture[i]].second;
         gnumber++;

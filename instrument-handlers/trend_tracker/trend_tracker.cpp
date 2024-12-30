@@ -700,7 +700,7 @@ void trend_tracker::verify_position_confirmation_status(void)
     auto as = hs_.create_autosaver();
 
     std::string position_state = state2state_str(hs_.get_int_var("position.state"));
-    
+
     hft_log(WARNING) << "Position ‘" << hs_.get_string_var("position.id")
                      << "’ is missing. Last state was ‘" << position_state
                      << "’. Assume it was closed manually.";

@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -38,7 +38,7 @@ private:
     void start_timer(void);
 
     unsigned long last_notify_time_;
-   
+
     boost::asio::io_context &io_ctx_;
     boost::asio::steady_timer wakeup_timer_;
 };

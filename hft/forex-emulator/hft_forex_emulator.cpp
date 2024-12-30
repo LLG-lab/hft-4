@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -56,10 +56,10 @@ void hft_forex_emulator::proceed(void)
     {
         while (true)
         {
-			if (is_tty_output && (record_number++ % 1000 == 0))
-			{
-				std::cout << get_progress_str() << "\r" << std::flush;
-			}
+            if (is_tty_output && (record_number++ % 1000 == 0))
+            {
+                std::cout << get_progress_str() << "\r" << std::flush;
+            }
 
             current_equity = get_equity_at_moment();
             current_free_margin = get_free_margin_at_moment(current_equity);
@@ -128,13 +128,13 @@ void hft_forex_emulator::proceed(void)
 
 std::string hft_forex_emulator::get_progress_str(void) const
 {
-	std::string result;
+    std::string result;
 
     for (auto &item : instruments_)
     {
-		result += std::to_string(item.second -> csv_faucet.get_progress());
-		result += std::string("% ");
-	}
+        result += std::to_string(item.second -> csv_faucet.get_progress());
+        result += std::string("% ");
+    }
 
     return result;
 }

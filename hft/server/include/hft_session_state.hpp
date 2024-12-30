@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -78,7 +78,6 @@ private:
 
     std::map<std::string, std::map<std::string, std::string>> variables_;
 };
-
 
 
 #endif /* __HFT_SESSION_STATE_HPP__ */

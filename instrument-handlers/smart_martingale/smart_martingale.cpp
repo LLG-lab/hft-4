@@ -555,7 +555,7 @@ void smart_martingale::continue_short_position(int ask_pips, hft::protocol::resp
 
          hft_log(TRACE) << "(SHORT) Going to profitable close position ‘"
                         << hs_.get_string_var("position.id") << "’.";
-         
+
          market.close_position(hs_.get_string_var("position.id"));
 
          return;

@@ -7,7 +7,7 @@
 #           is the bridge between the HFT and the
 #           cTrader proxy infrastructure.
 #
-# Copyright © 2017 - 2024 by LLG Ryszard Gradowski, All Rights Reserved.
+# Copyright © 2017 - 2025 by LLG Ryszard Gradowski, All Rights Reserved.
 #
 #
 # CAUTION! This application is an intellectual property

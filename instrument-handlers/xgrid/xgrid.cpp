@@ -129,29 +129,29 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
         if (json_exist_attribute(specific_config, "sellout"))
         {
-			sellout_ = json_get_bool_attribute(specific_config, "sellout");
+            sellout_ = json_get_bool_attribute(specific_config, "sellout");
 
-			if (sellout_)
-			{
-				hft_log(INFO) << "init: SELLOUT mode enabled, no new "
-				              << "positions will be opened.";
-			}
-		}
+            if (sellout_)
+            {
+                hft_log(INFO) << "init: SELLOUT mode enabled, no new "
+                              << "positions will be opened.";
+            }
+        }
 
         if (json_exist_attribute(specific_config, "immediate_money_supply"))
         {
-			immediate_money_supply_ = json_get_double_attribute(specific_config, "immediate_money_supply");
+            immediate_money_supply_ = json_get_double_attribute(specific_config, "immediate_money_supply");
 
             if (immediate_money_supply_ < 0.0)
             {
-				std::string msg = "Attribute ‘immediate_money_supply’ must be ≥ 0, got "
+                std::string msg = "Attribute ‘immediate_money_supply’ must be ≥ 0, got "
                                   + std::to_string(immediate_money_supply_);
 
                 throw std::runtime_error(msg.c_str());
-			}
+            }
 
             hft_log(INFO) << "init: IMS is " << immediate_money_supply_;
-		}
+        }
 
         const boost::json::object &grid_def = json_get_object_attribute(specific_config, "grid_definition");
 
@@ -307,7 +307,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         {
             if (active_gcells_ < active_gcells_limit_ && !sellout_)
             {
-				double bankroll = msg.equity + immediate_money_supply_;
+                double bankroll = msg.equity + immediate_money_supply_;
                 double num_of_lots = mmgmnt_ -> get_number_of_lots(bankroll);
 
                 if (num_of_lots > 0.0)
@@ -338,8 +338,8 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         }
         else  // Condition (II).
         {
-			if (internal_position_transferring_)
-			{
+            if (internal_position_transferring_)
+            {
                 auto pos_id = gcells_[precedessor_index].get_position_id();
                 gcells_[index].reloc_position(gcells_[precedessor_index]);
 
@@ -348,7 +348,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
                               << " → #" << gcells_[index].get_id() << ".";
 
                 save_grid();
-		    }
+            }
         }
     }
 
@@ -396,7 +396,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
             std::string message = "HFT handler msg: " + get_ticker_fmt2()
                                   + " opened " + std::to_string(opened_positions)
                                   + "th position";
-            
+
             user_alarmed_ = true;
             sms_alert(message);
             save_grid();
@@ -696,7 +696,7 @@ void xgrid::create_grid(const boost::json::object &grid_def)
 
             throw std::runtime_error(msg.c_str());
         }
-        
+
         end_price_pips = start_price_pips + cell_types[architecture[i]].first;
         terminal = cell_types[architecture[i]].second;
         gnumber++;

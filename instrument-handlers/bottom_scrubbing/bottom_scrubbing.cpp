@@ -438,7 +438,7 @@ void bottom_scrubbing::verify_position_confirmation_status(void)
     if (hs_.get_string_var("position.id") != "")
     {
         std::string position_state = state2state_str(hs_.get_int_var("position.state"));
-    
+
         hft_log(WARNING) << "Position ‘" << hs_.get_string_var("position.id")
                          << "’ is missing. Last state was ‘" << position_state
                          << "’. Assume it was closed manually.";

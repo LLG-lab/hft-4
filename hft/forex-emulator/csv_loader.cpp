@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -215,12 +215,12 @@ start_readline:
 
 int csv_loader::get_progress(void) const
 {
-	if (filesize_ == 0)
-	{
-		return 100;
-	}
+    if (filesize_ == 0)
+    {
+        return 100;
+    }
 
-	double ratio = get_record_position();
+    double ratio = get_record_position();
     ratio /= filesize_;
 
     return ratio*100;
@@ -239,7 +239,7 @@ void csv_loader::set_record_position(long position)
 
 long csv_loader::get_filesize(void) const
 {
-	long result = 0;
+    long result = 0;
 
     infile_.seekg (0, infile_.end);
     result = infile_.tellg();

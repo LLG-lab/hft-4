@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -79,5 +79,5 @@ bool csv_data_supplier::get_record(csv_record &out_rec)
 
 int csv_data_supplier::get_progress(void) const
 {
-	return csv_loader_.get_progress();
+    return csv_loader_.get_progress();
 }

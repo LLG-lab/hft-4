@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2024 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -112,8 +112,8 @@ void ctrader_ssl_connection::connect(void)
             X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
             hft2ctrader_log(INFO) << "Verifying " << subject_name;
 
-			return true; // Jeśli cert ok, ma zwrócić true.
-	});
+            return true; // Jeśli cert ok, ma zwrócić true.
+    });
 
     hft2ctrader_log(INFO) << "Starting async connection to the server "
                           << (*endpoint.begin()).host_name() << " ("
