@@ -21,8 +21,8 @@
 #include <hft_response.hpp>
 #include <hft_handler_resource.hpp>
 #include <hft_session_state.hpp>
-
 #include <trade_time_frame.hpp>
+#include <metrics.hpp>
 
 class session_state;
 
@@ -41,6 +41,7 @@ public:
         std::string description;
         std::string ticker_fmt2;
         std::string work_dir;
+        std::string session_name;
         int pips_digit;
         trade_time_frame ttf;
     };
@@ -103,6 +104,13 @@ protected:
 
     session_mode get_session_mode(void) const { return handler_informations_.pss -> get_mode(); }
     svr session_variable(const std::string &name, varscope scope = varscope::LOCAL) { return handler_informations_.pss -> variable(this, name, scope); }
+
+    //
+    // Methods for metrics purposes.
+    //
+
+    void setup_percentage_use_of_margin_metric(double value) { metrics::setup_percentage_use_of_margin(handler_informations_.session_name, handler_informations_.ticker_fmt2, value); }
+    void setup_opened_positions_metric(int value) { metrics::setup_opened_positions(handler_informations_.session_name, handler_informations_.ticker_fmt2, value); }
 
     //
     // Extra.

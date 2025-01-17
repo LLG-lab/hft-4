@@ -15,6 +15,7 @@
 \**********************************************************************/
 
 #include <hft_session_state.hpp>
+#include <hft_session.hpp>
 #include <instrument_handler.hpp>
 #include <utilities.hpp>
 #include <boost/json.hpp>
@@ -23,9 +24,9 @@
 #define hft_log(__X__) \
     CLOG(__X__, "session_state")
 
-session_state::session_state(const std::string &session_directory)
-    : state_filename_ { session_directory + "/session_state.json" },
-      session_directory_ { session_directory },
+session_state::session_state(const std::string &sessid)
+    : state_filename_ { hft_session::get_session_dir(sessid) + "/session_state.json" },
+      sessid_ { sessid },
       mode_ { session_mode::PERSISTENT },
       changed_ { false}
 {

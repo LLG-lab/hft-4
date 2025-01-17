@@ -33,9 +33,12 @@ private:
 
     std::map<char, std::pair<int, bool>> get_cell_types(const boost::json::object &obj) const;
     void create_money_manager(const boost::json::object &transactions);
+    void parse_instrument_details(const boost::json::object &instrument_details);
     void create_grid(const boost::json::object &grid_def);
     void load_grid(void);
     void save_grid(void);
+
+    void update_metrics(int bid_pips, double bankroll, boost::posix_time::ptime current_time);
 
     bool profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const;
     int  get_precedessor_position_index(int index) const;
@@ -53,9 +56,18 @@ private:
     int max_spread_;
     int active_gcells_;
     int active_gcells_limit_;
-    double dayswap_pips_;
     bool sellout_; // If set, xgrid handler will only sell existing positions.
     double immediate_money_supply_; // Capital outside the brokerage account, ready for immediate replenishment.
+
+    //
+    // Instrument_details for metrics purposes.
+    // Values are in account currency.
+    //
+
+    double pip_value_per_lot_;
+    double margin_required_per_lot_;
+    double commission_per_lot_;
+    double long_dayswap_per_lot_;
 
     //
     // Stuff for alarming purpose when
@@ -94,6 +106,8 @@ private:
 
     std::vector<gcell> gcells_;
     std::shared_ptr<money_management> mmgmnt_;
+
+    unsigned int tick_counter_;
 };
 
 } /* namespace hft_ih_plugin */

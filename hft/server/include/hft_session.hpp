@@ -32,12 +32,12 @@ public:
 
     ~hft_session(void);
 
-private:
-
     static std::string get_session_dir(const std::string &sessid)
     {
         return std::string("/var/lib/hft/sessions/") + sessid;
     }
+
+private:
 
     bool check_session_directory(const std::string &sessid);
 

@@ -87,6 +87,7 @@ list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/server/include/instrument_handler.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_handler_resource.hpp
      ${PROJECT_SOURCE_DIR}/server/include/hft_ih_dummy.hpp
+     ${PROJECT_SOURCE_DIR}/server/include/metrics.hpp
      ${PROJECT_SOURCE_DIR}/forex-emulator/include/hft_instrument_property.hpp
      ${PROJECT_SOURCE_DIR}/forex-emulator/include/csv_loader.hpp
      ${PROJECT_SOURCE_DIR}/forex-emulator/include/csv_data_supplier.hpp
@@ -121,6 +122,7 @@ list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/server/instrument_handler.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_handler_resource.cpp
      ${PROJECT_SOURCE_DIR}/server/hft_ih_dummy.cpp
+     ${PROJECT_SOURCE_DIR}/server/metrics.cpp
      ${PROJECT_SOURCE_DIR}/forex-emulator/hft_forexemu_main.cpp
      ${PROJECT_SOURCE_DIR}/forex-emulator/hft_instrument_property.cpp
      ${PROJECT_SOURCE_DIR}/forex-emulator/csv_loader.cpp

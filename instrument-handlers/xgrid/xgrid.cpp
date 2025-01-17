@@ -21,13 +21,17 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
       max_spread_ {0xFFFF},
       active_gcells_ {0},
       active_gcells_limit_ {0},
-      dayswap_pips_ {0.0},
       sellout_ {false},
       immediate_money_supply_ {0.0},
+      pip_value_per_lot_ {0.0},
+      margin_required_per_lot_ {0.0},
+      commission_per_lot_ {0.0},
+      long_dayswap_per_lot_ {0.0},
       used_cells_alarm_ {0},
       user_alarmed_ {false},
       positions_confirmed_ {false},
-      awaiting_position_status_counter_ {false}
+      awaiting_position_status_counter_ {false},
+      tick_counter_ {0ul}
 {
     el::Loggers::getLogger(get_logger_id().c_str(), true);
 
@@ -46,12 +50,17 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     //
     //  "handler_options": {
     //      "concurent": false,                      /* Optional, default: false */
-    //      "internal_position_transferring": false, /* Optional, default: false */
     //      "transactions": {
     //          .
     //          .
     //          .
     //      },
+    //      "instrument_details": {
+    //          .
+    //          .
+    //          .
+    //      },
+    //      "internal_position_transferring": false, /* Optional, default: false */
     //      "max_spread": 12,
     //      "dayswap_pips":-0.3,
     //      "active_gcells_limit":10, /* Optional, default: gcells */
@@ -68,14 +77,26 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
     try
     {
+        //
+        // Money management stuff.
+        //
+
         const boost::json::object &transactions = json_get_object_attribute(specific_config, "transactions");
+
+        create_money_manager(transactions);
+
+        //
+        // Parse instrument details.
+        //
+
+        const boost::json::object &instrument_details = json_get_object_attribute(specific_config, "instrument_details");
+
+        parse_instrument_details(instrument_details);
 
         if (json_exist_attribute(specific_config, "internal_position_transferring"))
         {
             internal_position_transferring_ = json_get_bool_attribute(specific_config, "internal_position_transferring");
         }
-
-        create_money_manager(transactions);
 
         max_spread_ = json_get_int_attribute(specific_config, "max_spread");
 
@@ -86,8 +107,6 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
             throw std::runtime_error(msg.c_str());
         }
-
-        dayswap_pips_ = json_get_double_attribute(specific_config, "dayswap_pips");
 
         if (json_exist_attribute(specific_config, "active_gcells_limit"))
         {
@@ -265,6 +284,13 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
     int bid_pips = floating2pips(msg.bid);
     int spread = ask_pips - bid_pips;
 
+    if ((tick_counter_++ % 60) == 0)
+    {
+        double bankroll = msg.equity + immediate_money_supply_;
+
+        update_metrics(bid_pips, bankroll, msg.request_time);
+    }
+
     if (spread > max_spread_)
     {
         return;
@@ -314,7 +340,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
                 {
                     auto pos_id = uid();
                     market.open_long(pos_id, num_of_lots);
-                    gcells_[index].attach_position(pos_id, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
+                    gcells_[index].attach_position(pos_id, num_of_lots, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
 
                     hft_log(INFO) << "Opening position ‘"
                                   << pos_id << "’ in cell #"
@@ -480,11 +506,49 @@ void xgrid::on_position_close(const hft::protocol::request::close_notify &msg, h
 // Private methods.
 //
 
+void xgrid::update_metrics(int bid_pips, double bankroll, boost::posix_time::ptime current_time)
+{
+    if (! metrics::is_service_enabled())
+    {
+        return;
+    }
+
+    int opened_positions = 0;
+    double total_expense = 0.0;
+
+    for (auto &cell : gcells_)
+    {
+        if (cell.has_position())
+        {
+            opened_positions++;
+
+            int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(cell.get_position_timestamp()).date()).days();
+            double swaps_expense = long_dayswap_per_lot_ * cell.get_position_volume() * days_elapsed;
+            double yield = pip_value_per_lot_ * cell.get_position_volume() * (bid_pips - cell.get_position_price_pips());
+            double req_margin = margin_required_per_lot_ * cell.get_position_volume();
+            double commission = commission_per_lot_ * cell.get_position_volume();
+
+            total_expense += (yield + swaps_expense - req_margin - commission);
+        }
+    }
+
+    double percentage_use_of_margin = (((-1.0)*total_expense) / bankroll) * 100;
+
+    setup_percentage_use_of_margin_metric(percentage_use_of_margin);
+    setup_opened_positions_metric(opened_positions);
+}
+
 bool xgrid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const
 {
-    int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(gcells_[cell_index].get_position_timestamp()).date()).days();
+    //
+    // Swaps by the design are not taken into account when calculating profitability,
+    // even though it may lead to closing the position at a loss.
+    //
+    // (XXX) int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(gcells_[cell_index].get_position_timestamp()).date()).days();
+    // (XXX) int yield = bid_pips - gcells_[cell_index].get_position_price_pips() + dayswap_pips_*days_elapsed;
+    //
 
-    int yield = bid_pips - gcells_[cell_index].get_position_price_pips() + dayswap_pips_*days_elapsed;
+    int yield = bid_pips - gcells_[cell_index].get_position_price_pips();
 
     if (yield >= gcells_[cell_index].span())
     {
@@ -629,6 +693,36 @@ void xgrid::create_money_manager(const boost::json::object &transactions)
     }
 }
 
+void xgrid::parse_instrument_details(const boost::json::object &instrument_details)
+{
+    //
+    // The following rules apply:
+    //  – The values ​​of each field are floating-point numbers expressed
+    //    in the currency of the broker account.
+    //  – The value of 'commission_per_lot' is always positive even
+    //    though it always incurs a cost.
+    //  – The value of 'commission_per_lot' expresses the so-called
+    //    double commission, i.e. it immediately covers the cost
+    //    of opening and closing the position.
+    //  – The value of 'long_dayswap_per_lot' is positive
+    //    if it is an income and negative if it is an expense.
+    //
+    // Example:
+    //
+    // {
+    //     "pip_value_per_lot":10.0,
+    //     "margin_required_per_lot":211.0,
+    //     "commission_per_lot":6.0,
+    //     "long_dayswap_per_lot":-6.25
+    // }
+    //
+
+    pip_value_per_lot_       = json_get_double_attribute(instrument_details, "pip_value_per_lot");
+    margin_required_per_lot_ = json_get_double_attribute(instrument_details, "margin_required_per_lot");
+    commission_per_lot_      = json_get_double_attribute(instrument_details, "commission_per_lot");
+    long_dayswap_per_lot_    = json_get_double_attribute(instrument_details, "long_dayswap_per_lot");
+}
+
 void xgrid::create_grid(const boost::json::object &grid_def)
 {
     //
@@ -753,6 +847,7 @@ void xgrid::load_grid(void)
     object const &obj = jv.get_object();
 
     std::string position_id;
+    double position_volume;
     unsigned long position_timestamp;
     int position_price_pips;
 
@@ -764,17 +859,19 @@ void xgrid::load_grid(void)
 
         if (position_id.length() > 0)
         {
+            position_volume     = json_get_double_attribute(position_info_obj, "volume");
             position_timestamp  = boost::lexical_cast<unsigned long>(json_get_string_attribute(position_info_obj, "time"));
             position_price_pips = json_get_int_attribute(position_info_obj, "price_pips");
 
             hft_log(INFO) << "load grid: Attaching position ‘"
                           << position_id << "’ to cell #"
                           << gcells_[i].get_id() << " (price pips: "
-                          << position_price_pips << ", opened: "
+                          << position_price_pips << ", lots: "
+                          << position_volume << ", opened: "
                           << hft::utils::timestamp2string(position_timestamp)
                           << ").";
 
-            gcells_[i].attach_position(position_id, position_timestamp, position_price_pips, active_gcells_);
+            gcells_[i].attach_position(position_id, position_volume, position_timestamp, position_price_pips, active_gcells_);
         }
     }
 
@@ -808,13 +905,14 @@ void xgrid::save_grid(void)
 
         //
         // {
-        //     "g189":{"id":"hft_10123456a","time":1111111,"price_pips":87654},
-        //     "g190":{"id":"hft_10234567b","time":2222222,"price_pips":76543}
+        //     "g189":{"id":"hft_10123456a","volume":0.01,"time":1111111,"price_pips":87654},
+        //     "g190":{"id":"hft_10234567b","volume":0.06,"time":2222222,"price_pips":76543}
         // }
         //
 
         json_data << "\t\"" << gcells_[i].get_id() << "\":{\"id\":\""
-                  << gcells_[i].get_position_id() << "\",\"time\":\""
+                  << gcells_[i].get_position_id() << "\",\"volume\":"
+                  << gcells_[i].get_position_volume() << ",\"time\":\""
                   << gcells_[i].get_position_timestamp() << "\",\"price_pips\":"
                   << gcells_[i].get_position_price_pips() << "}";
     }

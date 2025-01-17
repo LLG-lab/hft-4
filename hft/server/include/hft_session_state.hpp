@@ -54,14 +54,14 @@ public:
     session_state(void) = delete;
     session_state(session_state &) = delete;
     session_state(session_state &&) = delete;
-    session_state(const std::string &session_directory);
+    session_state(const std::string &sessid);
     ~session_state(void);
 
     autosaver create_autosaver(void) { return autosaver {this}; }
 
     session_mode get_mode(void) const { return mode_; }
 
-    std::string get_session_directory(void) const { return session_directory_; }
+    std::string get_session_id(void) const { return sessid_; }
 
     svr variable(instrument_handler *ph, const std::string &name, varscope scope);
 
@@ -72,7 +72,7 @@ private:
     void load(void);
 
     const std::string state_filename_;
-    const std::string session_directory_;
+    const std::string sessid_;
     session_mode mode_;
     bool changed_;
 

@@ -18,6 +18,7 @@ public:
     bool has_position(void) const { return position_id_.length() != 0; }
 
     std::string get_position_id(void) const { return position_id_; }
+    double get_position_volume(void) const { return position_volume_; }
     unsigned long get_position_timestamp(void) const { return position_time_; }
     int get_position_price_pips(void) const { return position_price_pips_; }
 
@@ -25,8 +26,8 @@ public:
     void confirm_position(void);
     void confirm_position(int position_price_pips);
 
-    void attach_position(const std::string &position_id, unsigned long position_time, int &counter);
-    void attach_position(const std::string &position_id, unsigned long position_time, int position_price_pips, int &counter);
+    void attach_position(const std::string &position_id, double position_volume, unsigned long position_time, int &counter);
+    void attach_position(const std::string &position_id, double position_volume, unsigned long position_time, int position_price_pips, int &counter);
     void detatch_position(int &counter);
     void reloc_position(gcell &cell);
 
@@ -46,11 +47,12 @@ private:
     int trade_max_limit_;
 
     std::string position_id_;
+    double position_volume_;
     unsigned long position_time_;
     int position_price_pips_;
 
     bool position_confirmed_;
-    
+
     std::string gcell_id_;
 };
 

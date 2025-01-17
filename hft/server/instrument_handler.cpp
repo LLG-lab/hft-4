@@ -20,6 +20,7 @@
 
 #include <sms_alert.hpp>
 #include <utilities.hpp>
+#include <hft_session.hpp>
 #include <hft_ih_dummy.hpp>
 
 int instrument_handler::floating2pips(double price) const
@@ -318,7 +319,8 @@ instrument_handler_ptr create_instrument_handler(std::shared_ptr<session_state> 
 
     handler_info.ticker = instrument;
     handler_info.ticker_fmt2 = boost::erase_all_copy(instrument, "/");
-    handler_info.work_dir = pss -> get_session_directory() + std::string("/") + handler_info.ticker_fmt2;
+    handler_info.work_dir = hft_session::get_session_dir(pss -> get_session_id()) + std::string("/") + handler_info.ticker_fmt2;
+    handler_info.session_name = pss -> get_session_id();
     handler_info.pss = pss;
 
     std::string manifest = handler_info.work_dir + std::string("/manifest.json");

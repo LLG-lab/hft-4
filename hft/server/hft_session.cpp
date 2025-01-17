@@ -150,7 +150,7 @@ void hft_session::handle_init_request(const hft::protocol::request::init &msg, s
 
     sessid_ = msg.sessid;
     pending_sessions_.insert(sessid_);
-    pss_.reset(new session_state(get_session_dir(sessid_)));
+    pss_.reset(new session_state(sessid_));
 
     //
     // Create handlers for requested instruments.

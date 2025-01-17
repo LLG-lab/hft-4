@@ -4,6 +4,7 @@
 gcell::gcell(int pips_span, int gnumber, bool terminal)
     : is_terminal_ { terminal },
       position_id_ { "" },
+      position_volume_ { 0.0 },
       position_time_ { 0ul },
       position_price_pips_ { 0 },
       position_confirmed_ { false }
@@ -17,6 +18,7 @@ gcell::gcell(int pips_span, int gnumber, bool terminal)
 gcell::gcell(int min_limit_pips, int max_limit_pips, int gnumber, bool terminal)
     : is_terminal_ { terminal },
       position_id_ { "" },
+      position_volume_ { 0.0 },
       position_time_ { 0ul },
       position_price_pips_ { 0 },
       position_confirmed_ { false }
@@ -53,7 +55,7 @@ void gcell::confirm_position(int position_price_pips)
     }
 }
 
-void gcell::attach_position(const std::string &position_id, unsigned long position_time, int &counter)
+void gcell::attach_position(const std::string &position_id, double position_volume, unsigned long position_time, int &counter)
 {
     if (has_position())
     {
@@ -66,15 +68,16 @@ void gcell::attach_position(const std::string &position_id, unsigned long positi
     }
 
     position_id_ = position_id;
+    position_volume_ = position_volume;
     position_time_ = position_time;
     position_price_pips_ = 0;
     position_confirmed_ = false;
     counter++;
 }
 
-void gcell::attach_position(const std::string &position_id, unsigned long position_time, int position_price_pips, int &counter)
+void gcell::attach_position(const std::string &position_id, double position_volume, unsigned long position_time, int position_price_pips, int &counter)
 {
-    attach_position(position_id, position_time, counter);
+    attach_position(position_id, position_volume, position_time, counter);
     position_price_pips_ = position_price_pips;
 }
 
@@ -83,6 +86,7 @@ void gcell::detatch_position(int &counter)
     if (has_position())
     {
         position_id_.clear();
+        position_volume_ = 0.0;
         position_time_ = 0ul;
         position_price_pips_ = 0;
         position_confirmed_ = false;
@@ -116,11 +120,13 @@ void gcell::reloc_position(gcell &cell)
     }
 
     position_id_ = cell.position_id_;
+    position_volume_ = cell.position_volume_;
     position_time_ = cell.position_time_;
     position_price_pips_ = cell.position_price_pips_;
     position_confirmed_ = cell.position_confirmed_;
 
     cell.position_id_.clear();
+    cell.position_volume_ = 0.0;
     cell.position_time_ = 0ul;
     cell.position_price_pips_ = 0;
     cell.position_confirmed_ = false;
