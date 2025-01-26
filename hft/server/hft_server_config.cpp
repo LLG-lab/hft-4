@@ -24,7 +24,12 @@
 #include <utilities.hpp>
 
 hft_server_config::hft_server_config(const std::string &xml_file_name)
-    : log_severity_(logging_severity::HFT_SEVERITY_INFO)
+    : log_severity_ {logging_severity::HFT_SEVERITY_INFO},
+      ipc_address_ {"127.0.0.1"},
+      ipc_port_ {8137},
+      metrics_active_ {false},
+      metrics_address_ {"127.0.0.1"},
+      metrics_port_ {8138}
 {
     using namespace rapidxml;
 
@@ -63,9 +68,82 @@ hft_server_config::hft_server_config(const std::string &xml_file_name)
         return;
     }
 
+    std::string node_name;
+
     for (xml_node<> *node = server_node -> first_node(); node; node = node -> next_sibling())
     {
-        if (std::string(node -> name()) == "sms-alerts")
+        node_name = node -> name();
+
+        if (node_name == "ipc-listen-address")
+        {
+            ipc_address_ = node -> value();
+        }
+        else if (node_name == "ipc-listen-port")
+        {
+            ipc_port_ = atoi(node -> value());
+        }
+        else if (node_name == "metrics")
+        {
+            //
+            // Stuff to parse:
+            //
+            //    <metrics active="false">
+            //        <http-listen-address>127.0.0.1</http-listen-address>
+            //        <http-listen-port>8138</http-listen-port>
+            //    </metrics>
+            //
+
+            //
+            // Obtain ‘active’ attribute.
+            //
+
+            xml_attribute<> *active_attr = node -> first_attribute("active");
+
+            if (active_attr == nullptr)
+            {
+                throw std::runtime_error("Missing ‘active’ attribute in ‘metrics’ node in xml config");
+            }
+
+            if (strcasecmp(active_attr -> value(), "FALSE") == 0 ||
+                    strcasecmp(active_attr -> value(), "NO") == 0 ||
+                        strcasecmp(active_attr -> value(), "0") == 0)
+            {
+                metrics_active_ = false;
+            }
+            else if (strcasecmp(active_attr -> value(), "TRUE") == 0 ||
+                        strcasecmp(active_attr -> value(), "YES") == 0 ||
+                            strcasecmp(active_attr -> value(), "1") == 0)
+            {
+                metrics_active_ = true;
+            }
+            else
+            {
+                throw std::runtime_error("Illegal ‘active’ attribute value in ‘metrics’ node in xml config");
+            }
+
+            //
+            // Go into ‘http-listen-address’ node.
+            //
+
+            xml_node<> *address_node = node -> first_node("http-listen-address");
+
+            if (address_node != nullptr)
+            {
+                metrics_address_ = address_node -> value();
+            }
+
+            //
+            // Go into ‘http-listen-port’ node.
+            //
+
+            xml_node<> *port_node = node -> first_node("http-listen-port");
+
+            if (port_node != nullptr)
+            {
+                metrics_port_ = atoi(port_node -> value());
+            }
+        }
+        else if (node_name == "sms-alerts")
         {
             //
             // Stuff to parse:
@@ -185,7 +263,7 @@ hft_server_config::hft_server_config(const std::string &xml_file_name)
                 sms_config_.recipients.emplace_back(recipient_node -> value());
             }
         }
-        else if (std::string(node -> name()) == "logging")
+        else if (node_name == "logging")
         {
             xml_attribute<> *severity_attr = node -> first_attribute("severity");
 

@@ -57,7 +57,6 @@ static struct hft_server_options_type
     int ipc_port;
     std::string metrics_endpoint;
     int metrics_port;
-    bool start_metrics_service;
 
 } hft_server_options;
 
@@ -86,10 +85,10 @@ int hft_server_main(int argc, char *argv[])
         ("daemon,D", "Start server as a daemon")
         ("metrics,M", "Enable the Prometheus metrics HTTP server. Disabled by default.")
         ("config,c", prog_opts::value<std::string>(&hftOption(config_file_name) ) -> default_value("/etc/hft/hft-config.xml"), "Server configuration file name")
-        ("ipc-endpoint,e", prog_opts::value<std::string>(&hftOption(ipc_endpoint) ) -> default_value("127.0.0.1"), "Set IPC listen address for the Market Gateway")
-        ("ipc-port,p", prog_opts::value<int>(&hftOption(ipc_port) ) -> default_value(8137), "Set IPC listen TCP port for the Market Gateway")
-        ("metrics-endpoint", prog_opts::value<std::string>(&hftOption(metrics_endpoint) ) -> default_value("127.0.0.1"), "Set the listen address for the Prometheus metrics HTTP server (if enabled)")
-        ("metrics-port",  prog_opts::value<int>(&hftOption(metrics_port) ) -> default_value(8138), "Set the listen TCP port for the Prometheus metrics HTTP server (if enabled)")
+        ("ipc-endpoint,e", prog_opts::value<std::string>(&hftOption(ipc_endpoint) ), "Set IPC listen address for the Market Gateway")
+        ("ipc-port,p", prog_opts::value<int>(&hftOption(ipc_port) ), "Set IPC listen TCP port for the Market Gateway")
+        ("metrics-endpoint", prog_opts::value<std::string>(&hftOption(metrics_endpoint) ), "Set the listen address for the Prometheus metrics HTTP server (if enabled)")
+        ("metrics-port",  prog_opts::value<int>(&hftOption(metrics_port) ), "Set the listen TCP port for the Prometheus metrics HTTP server (if enabled)")
     ;
 
     prog_opts::options_description cmdline_options;
@@ -151,16 +150,32 @@ int hft_server_main(int argc, char *argv[])
     }
 
     //
-    // Should the metrics HTTP server be enabled.
+    // Override some configurations by command line settings.
     //
+
+    if (vm.count("ipc-endpoint"))
+    {
+        hft_srv_cfg.override_ipc_address(hftOption(ipc_endpoint));
+    }
+
+    if (vm.count("ipc-port"))
+    {
+        hft_srv_cfg.override_ipc_port(hftOption(ipc_port));
+    }
 
     if (vm.count("metrics"))
     {
-        hftOption(start_metrics_service) = true;
+        hft_srv_cfg.set_metrics_active();
     }
-    else
+
+    if (vm.count("metrics-endpoint"))
     {
-        hftOption(start_metrics_service) = false;
+        hft_srv_cfg.override_metrics_address(hftOption(metrics_endpoint));
+    }
+
+    if (vm.count("metrics-port"))
+    {
+        hft_srv_cfg.override_metrics_port(hftOption(metrics_port));
     }
 
     //
@@ -168,8 +183,8 @@ int hft_server_main(int argc, char *argv[])
     // possible use by child processes.
     //
 
-    setenv("HFT_ENDPOINT", hftOption(ipc_endpoint).c_str(), 1);
-    setenv("HFT_PORT", std::to_string(hftOption(ipc_port)).c_str(), 1);
+    setenv("HFT_ENDPOINT", hft_srv_cfg.get_ipc_address().c_str(), 1);
+    setenv("HFT_PORT", std::to_string(hft_srv_cfg.get_ipc_port()).c_str(), 1);
 
     if (hftOption(start_as_daemon))
     {
@@ -201,11 +216,11 @@ int hft_server_main(int argc, char *argv[])
     {
         marketplace_gateway_process gateway_process(ioctx, hftOption(config_file_name));
 
-        hft_server server(ioctx, hftOption(ipc_endpoint), hftOption(ipc_port));
+        hft_server server(ioctx, hft_srv_cfg.get_ipc_address(), hft_srv_cfg.get_ipc_port());
 
-        if (hftOption(start_metrics_service))
+        if (hft_srv_cfg.is_metrics_active())
         {
-            metrics::create_server(ioctx, hftOption(metrics_endpoint), hftOption(metrics_port));
+            metrics::create_server(ioctx, hft_srv_cfg.get_metrics_address(), hft_srv_cfg.get_metrics_port());
         }
 
         if (hftOption(start_as_daemon))

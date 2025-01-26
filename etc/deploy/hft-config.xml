@@ -2,7 +2,13 @@
 <hft>
 	<server>
 		<!--
-		Available logging severities:
+		 Accepting TCP endpoint for gateway processes.
+		-->
+		<ipc-listen-address>127.0.0.1</ipc-listen-address>
+		<ipc-listen-port>8137</ipc-listen-port>
+
+		<!--
+		 Available logging severities:
 			FATAL
 			ERROR
 			WARNING
@@ -29,6 +35,16 @@
 			-->
 			<recipient>000000000</recipient>
 		</sms-alerts>
+
+		<metrics active="false">
+			<!--
+			 Prometheus metrics HTTP server. Can be optionally
+			 enabled or disabled. If enabled, accepting HTTP endpoint
+			 can be configured here.
+			-->
+			<http-listen-address>127.0.0.1</http-listen-address>
+			<http-listen-port>8138</http-listen-port>
+		</metrics>
 	</server>
 	<market-gateway-processes>
 		<process name="IC Markets" active="false">
@@ -46,9 +62,8 @@
 	<market bridge="IC Markets" sessid="icmarkets-session" >
 		<auth account="demo">
 			<!--
-				Example credentials.
+			 Example credentials.
 			-->
-
 			<client-id>3383_y6jxYgYnMyO9inyayd2oFsoxdnkAkydoStzM0HM6nTScqmK7vD</client-id>
 			<client-secret>21fIJ9Xvk6ZYMz7gR65qBn5DvcUT0C8tBQ4zoz8GNFakGvdrPE</client-secret>
 			<access-token>Bqr32tgJVqXFOIlexqYFdxddgY8hrpOJQKnpEkkXwIA</access-token>
@@ -56,26 +71,26 @@
 		</auth>
 
 		<!--
-			Enter the instrument tickers for which you want to download here
-			data from the stock exchange and then transferred to HFT,
-			here is an example:
+		 Enter the instrument tickers for which you want to download here
+		 data from the stock exchange and then transferred to HFT,
+		 here is an example:
 
-			<instrument ticker="EURUSD"/>
+		<instrument ticker="EURUSD"/>
 		-->
 	</market>
 
 	<forex-emulator>
 
 		<!--
-			Example entry.
+		 Example entry.
 		-->
 
 		<instrument-property ticker="EURUSD"
-				pip-significant-digit="4"
-				pip-value-per-lot="0.0003876"
-				long-dayswap-per-lot="-0.0001558"
-				short-dayswap-per-lot="0.0000038"
-				commision-per-lot="0.0001649"
+			pip-significant-digit="4"
+			pip-value-per-lot="0.0003876"
+			long-dayswap-per-lot="-0.0001558"
+			short-dayswap-per-lot="0.0000038"
+			commision-per-lot="0.0001649"
 		/>
 
 	</forex-emulator>
