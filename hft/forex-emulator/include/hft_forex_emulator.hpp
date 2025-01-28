@@ -48,6 +48,7 @@ public:
         double equity;
         double total_swaps;
         double money_yield;
+        int used_margin_percentage;
         bool closed_forcibly;
         int still_opened;
     };
@@ -152,7 +153,8 @@ private:
 
     double get_equity_at_moment(void) const;
 
-    double get_used_margin_at_moment(void) const;
+    double get_security_deposit(void) const;
+    int get_used_margin_percentage_at_moment(double equity_at_moment) const;
 
     double get_free_margin_at_moment(double equity_at_moment) const;
 

@@ -33,6 +33,8 @@ private:
 
     void print_string(const std::string &s, int len);
 
+    void print_percent(int value);
+
     size_t get_max_instrument_strlen(const hft_forex_emulator::emulation_result &data);
 
     const bool is_tty_output_;

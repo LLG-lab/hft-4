@@ -33,6 +33,8 @@
 
 #include <easylogging++.h>
 
+#include "../hft-config.h"
+
 #undef HFT_DEVTEST
 
 #ifdef HFT_DEVTEST
@@ -142,6 +144,13 @@ private:
 
 bool metrics_service_enabled = false;
 
+std::string hft_http_server_version(void)
+{
+    return std::string("HFT v.") + std::string(HFT_VERSION_MAJOR)
+                                 + std::string(".")
+                                 + std::string(HFT_VERSION_MINOR);
+}
+
 std::string fail_message(beast::error_code ec, char const* what)
 {
     std::string res = what + std::string(": ") + ec.message();
@@ -160,7 +169,7 @@ http::message_generator handle_request(http::request<Body, http::basic_fields<Al
     [&req](beast::string_view why)
     {
         http::response<http::string_body> res{http::status::bad_request, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(http::field::server, hft_http_server_version());
         res.set(http::field::content_type, "text/plain; version=0.0.4; charset=utf-8; escaping=values");
         res.keep_alive(req.keep_alive());
         res.body() = std::string(why);
@@ -177,7 +186,7 @@ http::message_generator handle_request(http::request<Body, http::basic_fields<Al
     [&req](beast::string_view target)
     {
         http::response<http::string_body> res{http::status::not_found, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(http::field::server, hft_http_server_version());
         res.set(http::field::content_type, "text/plain; version=0.0.4; charset=utf-8; escaping=values");
         res.keep_alive(req.keep_alive());
         res.body() = "The resource '" + std::string(target) + "' was not found.";
@@ -194,7 +203,7 @@ http::message_generator handle_request(http::request<Body, http::basic_fields<Al
     [&req](beast::string_view what)
     {
         http::response<http::string_body> res{http::status::internal_server_error, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(http::field::server, hft_http_server_version());
         res.set(http::field::content_type, "text/plain; version=0.0.4; charset=utf-8; escaping=values");
         res.keep_alive(req.keep_alive());
         res.body() = "An error occurred: '" + std::string(what) + "'";
@@ -230,7 +239,7 @@ http::message_generator handle_request(http::request<Body, http::basic_fields<Al
     if(req.method() == http::verb::head)
     {
         http::response<http::empty_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        res.set(http::field::server, hft_http_server_version());
         res.set(http::field::content_type, "text/plain; version=0.0.4; charset=utf-8; escaping=values");
         res.content_length(body.size());
         res.keep_alive(req.keep_alive());
@@ -239,7 +248,7 @@ http::message_generator handle_request(http::request<Body, http::basic_fields<Al
     }
 
     http::response<http::string_body> res{http::status::ok, req.version()};
-    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(http::field::server, hft_http_server_version());
     res.set(http::field::content_type, "text/plain; version=0.0.4; charset=utf-8; escaping=values");
     res.keep_alive(req.keep_alive());
     res.body() = body;

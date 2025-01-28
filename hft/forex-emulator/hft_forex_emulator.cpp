@@ -309,6 +309,7 @@ void hft_forex_emulator::handle_close_position(const std::string &id, const tick
     positions_.erase(it);
 
     pos.equity = get_equity_at_moment();
+    pos.used_margin_percentage = get_used_margin_percentage_at_moment(pos.equity);
     pos.still_opened = positions_.size();
 
     emulation_result_.trades.push_back(pos);
@@ -444,22 +445,34 @@ double hft_forex_emulator::get_equity_at_moment(void) const
     return equity;
 }
 
-double hft_forex_emulator::get_used_margin_at_moment(void) const
+double hft_forex_emulator::get_security_deposit(void) const
 {
-    double used_margin = 0.0;
+    double secdepo = 0.0;
 
     for (auto &pos : positions_)
     {
         double qty = pos.second.qty;
-        used_margin += instruments_.at(pos.second.instrument) -> property.get_margin_required_per_lot() * qty;
+        secdepo += instruments_.at(pos.second.instrument) -> property.get_margin_required_per_lot() * qty;
     }
 
-    return used_margin;
+    return secdepo;
+}
+
+int hft_forex_emulator::get_used_margin_percentage_at_moment(double equity_at_moment) const
+{
+    if (balance_ == 0.0)
+    {
+        return 0.0;
+    }
+
+    auto used_margin = balance_ - get_free_margin_at_moment(equity_at_moment);
+
+    return 100.0 * (used_margin / balance_);
 }
 
 double hft_forex_emulator::get_free_margin_at_moment(double equity_at_moment) const
 {
-    return equity_at_moment - get_used_margin_at_moment();
+    return equity_at_moment - get_security_deposit();
 }
 
 double hft_forex_emulator::get_margin_level_at_moment(double equity_at_moment) const
@@ -474,5 +487,5 @@ double hft_forex_emulator::get_margin_level_at_moment(double equity_at_moment) c
     // greater than zero for all instruments.
     //
 
-    return equity_at_moment / get_used_margin_at_moment();
+    return equity_at_moment / get_security_deposit();
 }
