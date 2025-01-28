@@ -15,6 +15,7 @@ money_management::money_management(mm_progressive_initializer &mmpi)
 {
 }
 
+#if 0
 double money_management::get_number_of_lots(double balance)
 {
     switch (mode_)
@@ -38,4 +39,38 @@ double money_management::get_number_of_lots(double balance)
     }
 
     return 0.0;
+}
+#endif
+
+double money_management::get_number_of_lots(double balance)
+{
+    int result;
+    double temp;
+
+    int remnant = remnant_svr_.get<int>();
+
+    switch (mode_)
+    {
+        case mm_mode::MMM_FLAT:
+        {
+            result = 100.0*number_of_lots_;
+            temp = 100.0*number_of_lots_ - result;
+            break;
+        }
+        case mm_mode::MMM_PROGRESSIVE:
+        {
+            result = balance * slope_;
+            temp = balance * slope_ - result;
+            break;
+        }
+        default:
+            return 0.0;
+    }
+
+    remnant += (100*temp);
+    result += (remnant/100);
+    remnant %= 100;
+    remnant_svr_.set(remnant);
+
+    return static_cast<double>(result) / 100.0;
 }
