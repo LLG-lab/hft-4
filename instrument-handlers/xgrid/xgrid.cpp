@@ -286,9 +286,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
     if ((tick_counter_++ % 60) == 0)
     {
-        double bankroll = msg.equity + immediate_money_supply_;
-
-        update_metrics(bid_pips, bankroll, msg.request_time);
+        update_metrics(bid_pips, msg.equity, msg.request_time);
     }
 
     if (spread > max_spread_)
