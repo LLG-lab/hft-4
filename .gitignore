@@ -1,6 +1,11 @@
 3rd-party/boost
 3rd-party/boost_*
 3rd-party/protobuf
+utils/extractcsv/CMakeCache.txt
+utils/extractcsv/Makefile
+utils/extractcsv/cmake_install.cmake
+utils/extractcsv/extractcsv
+utils/extractcsv/CMakeFiles
 hft/hft-config.h
 hft/draft_main.cpp
 hft/CMakeCache.txt
