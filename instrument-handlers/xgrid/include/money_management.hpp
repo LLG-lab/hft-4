@@ -10,6 +10,7 @@ struct mm_flat_initializer
     //
 
     double number_of_lots_;
+    svr remnant_svr_;
 };
 
 struct mm_progressive_initializer
@@ -53,6 +54,7 @@ private:
 
     // Mode progressive.
     double slope_;
+
     svr remnant_svr_;
 };
 

@@ -3,7 +3,8 @@
 money_management::money_management(mm_flat_initializer &mmfi)
     : mode_ {mm_mode::MMM_FLAT},
       number_of_lots_ {mmfi.number_of_lots_},
-      slope_ {0.0}
+      slope_ {0.0},
+      remnant_svr_ {mmfi.remnant_svr_}
 {
 }
 

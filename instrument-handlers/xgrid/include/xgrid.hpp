@@ -2,6 +2,7 @@
 #include <instrument_handler.hpp>
 #include <money_management.hpp>
 #include <gcell.hpp>
+#include <fcd.hpp>
 
 #ifndef __XGRID_HPP__
 #define __XGRID_HPP__
@@ -106,6 +107,7 @@ private:
 
     std::vector<gcell> gcells_;
     std::shared_ptr<money_management> mmgmnt_;
+    fcd fcd_;
 
     unsigned int tick_counter_;
 };

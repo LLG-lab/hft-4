@@ -31,6 +31,7 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
       user_alarmed_ {false},
       positions_confirmed_ {false},
       awaiting_position_status_counter_ {false},
+      fcd_ {session_variable("xgrid.fcd_actions")},
       tick_counter_ {0ul}
 {
     el::Loggers::getLogger(get_logger_id().c_str(), true);
@@ -59,6 +60,10 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     //          .
     //          .
     //          .
+    //      },
+    //      "fcd": {                                 /* Optional. Disabled if undefined"
+    //          "enabled": true,
+    //          "depth_fall_cutoff": 2
     //      },
     //      "internal_position_transferring": false, /* Optional, default: false */
     //      "max_spread": 12,
@@ -92,6 +97,49 @@ void xgrid::init_handler(const boost::json::object &specific_config)
         const boost::json::object &instrument_details = json_get_object_attribute(specific_config, "instrument_details");
 
         parse_instrument_details(instrument_details);
+
+        //
+        // Parse FCD (Flash - Crash Detector) section.
+        //
+
+        if (json_exist_attribute(specific_config, "fcd"))
+        {
+            const boost::json::object &fcd_jobject = json_get_object_attribute(specific_config, "fcd");
+
+            if (! json_exist_attribute(fcd_jobject, "enabled"))
+            {
+                std::string msg = "Undefined Flash - Crash Detector enable state";
+
+                throw std::runtime_error(msg.c_str());
+            }
+
+            if (json_get_bool_attribute(fcd_jobject, "enabled"))
+            {
+                fcd_.enable();
+
+                if (! json_exist_attribute(fcd_jobject, "depth_fall_cutoff"))
+                {
+                    std::string msg = "Undefined ‘depth_fall_cutoff’ in ‘fcd’ section";
+
+                    throw std::runtime_error(msg.c_str());
+                }
+
+                int dfc = json_get_int_attribute(fcd_jobject, "depth_fall_cutoff");
+
+                fcd_.setup_dfc(dfc);
+
+                hft_log(INFO) << "init: Flash - Crash Detector is enabled for handler. "
+                              << " ‘depth_fall_cutoff’ is set to ‘" << dfc << "’.";
+            }
+            else
+            {
+                hft_log(INFO) << "init: Flash - Crash Detector is disabled for handler.";
+            }
+        }
+        else
+        {
+            hft_log(INFO) << "init: Flash - Crash Detector is disabled for handler.";
+        }
 
         if (json_exist_attribute(specific_config, "internal_position_transferring"))
         {
@@ -273,20 +321,21 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 {
     verify_position_confirmation_status();
 
+    int ask_pips = floating2pips(msg.ask);
+    int bid_pips = floating2pips(msg.bid);
+    int spread   = ask_pips - bid_pips;
+    unsigned long request_timestamp = hft::utils::ptime2timestamp(msg.request_time);
+
+    if ((tick_counter_++ % 60) == 0)
+    {
+        update_metrics(bid_pips, msg.equity, msg.request_time);
+    }
+
     if (current_state_ == state::WAIT_FOR_STATUS)
     {
         await_position_status();
 
         return;
-    }
-
-    int ask_pips = floating2pips(msg.ask);
-    int bid_pips = floating2pips(msg.bid);
-    int spread = ask_pips - bid_pips;
-
-    if ((tick_counter_++ % 60) == 0)
-    {
-        update_metrics(bid_pips, msg.equity, msg.request_time);
     }
 
     if (spread > max_spread_)
@@ -318,7 +367,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
     // We have four separate conditions:
     //
     //   index |     |     |  •  |  •  |
-    // --------------+------------------
+    // --------+-----+-----+-----+-----+
     // index–n |     |  •  |     |  •  |
     //           (I)  (II)  (III) (IV)
 
@@ -331,31 +380,59 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         {
             if (active_gcells_ < active_gcells_limit_ && !sellout_)
             {
-                double bankroll = msg.equity + immediate_money_supply_;
-                double num_of_lots = mmgmnt_ -> get_number_of_lots(bankroll);
-
-                if (num_of_lots > 0.0)
+                if (fcd_.can_open_position())
                 {
-                    auto pos_id = uid();
-                    market.open_long(pos_id, num_of_lots);
-                    gcells_[index].attach_position(pos_id, num_of_lots, hft::utils::ptime2timestamp(msg.request_time), active_gcells_);
+                    double bankroll = msg.equity + immediate_money_supply_;
+                    double num_of_lots = mmgmnt_ -> get_number_of_lots(bankroll);
 
-                    hft_log(INFO) << "Opening position ‘"
-                                  << pos_id << "’ in cell #"
-                                  << gcells_[index].get_id()
-                                  << ", balance before open: "
-                                  << msg.equity
-                                  << ", whole money including IMS: "
-                                  << bankroll;
+                    if (num_of_lots > 0.0)
+                    {
+                        auto pos_id = uid();
+                        market.open_long(pos_id, num_of_lots);
+                        gcells_[index].attach_position(pos_id, num_of_lots, request_timestamp, active_gcells_);
 
-                    current_state_ = state::WAIT_FOR_STATUS;
+                        hft_log(INFO) << "Opening position ‘"
+                                      << pos_id << "’ in cell #"
+                                      << gcells_[index].get_id()
+                                      << ", balance before open: "
+                                      << msg.equity
+                                      << ", whole money including IMS: "
+                                      << bankroll;
+
+                        current_state_ = state::WAIT_FOR_STATUS;
+                    }
+                    else
+                    {
+                        hft_log(INFO) << "Insufficient volume to open position on market, "
+                                      << "creating Virtual Position instead.";
+
+                        int drop = 0;
+                        gcells_[index].attach_position("virtual", 1.0, request_timestamp, drop);
+                        gcells_[index].confirm_position(ask_pips);
+                        fcd_.feed(fcd::action::OPEN_POS);
+                        save_grid();
+                    }
+                }
+                else
+                {
+                    hft_log(INFO) << "Refusal to open a position by Flash – Crash Detector, "
+                                  << "creating Virtual Position instead.";
+
+                    int drop = 0;
+                    gcells_[index].attach_position("virtual", 1.0, request_timestamp, drop);
+                    gcells_[index].confirm_position(ask_pips);
+                    fcd_.feed(fcd::action::OPEN_POS);
+                    save_grid();
                 }
             }
             else
             {
-                hft_log(INFO) << "Cannot open position, since amount "
-                              << "of active gcells has reached the limit ‘"
-                              << active_gcells_limit_ << "’.";
+                if ((tick_counter_ % 500) == 0)
+                {
+                    hft_log(INFO) << "Cannot open position, since amount "
+                                  << "of active gcells has reached the limit ‘"
+                                  << active_gcells_limit_ << "’.";
+                }
             }
 
             return;
@@ -388,14 +465,61 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         {
             // Close position.
 
-            market.close_position(gcells_[i].get_position_id());
+            if (gcells_[i].get_position_id() == "virtual")
+            {
+                hft_log(INFO) << "Closing Virtual Position.";
 
-            hft_log(INFO) << "Closing position ‘" << gcells_[i].get_position_id()
-                          << "’ from cell #" << gcells_[i].get_id();
+                int drop = 1;
 
-            current_state_ = state::WAIT_FOR_STATUS;
+                gcells_[i].detatch_position(drop);
 
-            return;
+                fcd_.feed(fcd::action::CLOSE_POS);
+
+                save_grid();
+            }
+            else
+            {
+                market.close_position(gcells_[i].get_position_id());
+
+                hft_log(INFO) << "Closing position ‘" << gcells_[i].get_position_id()
+                              << "’ from cell #" << gcells_[i].get_id();
+
+                current_state_ = state::WAIT_FOR_STATUS;
+
+                return;
+            }
+        }
+    }
+
+    if (fcd_.is_enabled())
+    {
+        //
+        // Attempt to liquidate pyramid of all virtual
+        // positions from index + 1 to end.
+        //
+
+        int virtual_closed = 0;
+
+        for (int i = index + 1; i < gcells_.size(); i++)
+        {
+            if (gcells_[i].has_position() && gcells_[i].get_position_id() == "virtual")
+            {
+                //
+                // Detatching without feeding fcd.
+                //
+
+                gcells_[i].detatch_position(virtual_closed);
+            }
+        }
+
+        virtual_closed *= (-1);
+
+        if (virtual_closed > 0)
+        {
+            hft_log(INFO) << "Closed extra " << virtual_closed
+                          << " Virtual Position(s).";
+
+            save_grid();
         }
     }
 
@@ -409,7 +533,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
         for (auto &cell : gcells_)
         {
-            if (cell.has_position())
+            if (cell.has_position() && cell.get_position_id() != "virtual")
             {
                 opened_positions++;
             }
@@ -442,6 +566,8 @@ void xgrid::on_position_open(const hft::protocol::request::open_notify &msg, hft
             if (msg.status)
             {
                 gcells_[i].confirm_position(floating2pips(msg.price));
+
+                fcd_.feed(fcd::action::OPEN_POS);
 
                 hft_log(INFO) << "position_open: Position ‘" << msg.id
                               << "’ successfuly opened, price was "
@@ -479,6 +605,8 @@ void xgrid::on_position_close(const hft::protocol::request::close_notify &msg, h
             if (gcells_[i].has_position() && gcells_[i].get_position_id() == msg.id)
             {
                 gcells_[i].detatch_position(active_gcells_);
+
+                fcd_.feed(fcd::action::CLOSE_POS);
 
                 save_grid();
 
@@ -656,6 +784,7 @@ void xgrid::create_money_manager(const boost::json::object &transactions)
     {
         mm_flat_initializer mmfi;
         mmfi.number_of_lots_ = json_get_double_attribute(transactions, "number_of_lots");
+        mmfi.remnant_svr_ = session_variable("xgrid.remnant");
 
         if (mmfi.number_of_lots_ <= 0.0)
         {
@@ -869,9 +998,21 @@ void xgrid::load_grid(void)
                           << hft::utils::timestamp2string(position_timestamp)
                           << ").";
 
-            gcells_[i].attach_position(position_id, position_volume, position_timestamp, position_price_pips, active_gcells_);
+            if (position_id == "virtual")
+            {
+                int drop = 0;
+
+                gcells_[i].attach_position(position_id, position_volume, position_timestamp, position_price_pips, drop);
+            }
+            else
+            {
+                gcells_[i].attach_position(position_id, position_volume, position_timestamp, position_price_pips, active_gcells_);
+            }
         }
     }
+
+    hft_log(INFO) << "load grid: Active gcells: ‘"
+                  << active_gcells_ << "’";
 
     if (json_exist_attribute(obj, "user_alarmed"))
     {
@@ -933,12 +1074,19 @@ void xgrid::verify_position_confirmation_status(void)
     {
         if (gcells_[i].has_position() && ! gcells_[i].has_position_confirmed())
         {
-            hft_log(WARNING) << "Position ‘" << gcells_[i].get_position_id()
-                             << "’ does not exist on market anymore, removing from grid.";
+            if (gcells_[i].get_position_id() == "virtual")
+            {
+                gcells_[i].confirm_position();
+            }
+            else
+            {
+                hft_log(WARNING) << "Position ‘" << gcells_[i].get_position_id()
+                                 << "’ does not exist on market anymore, removing from grid.";
 
-            gcells_[i].detatch_position(active_gcells_);
+                gcells_[i].detatch_position(active_gcells_);
 
-            to_be_save = true;
+                to_be_save = true;
+            }
         }
     }
 
