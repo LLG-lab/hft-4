@@ -10,7 +10,7 @@ pushd $PROJECT_TREE_DIRECTORY > /dev/null
 
 BOOST_DIRECTORY="3rd-party/boost_1_81_0"
 BOOST_TARBALL=boost_1_81_0.tar.bz2
-BOOST_URL="https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/$BOOST_TARBALL"
+BOOST_URL="https://archives.boost.io/release/1.81.0/source/$BOOST_TARBALL"
 
 if [ -d $BOOST_DIRECTORY ] ; then
     echo "Boost libraries already downloaded into the project tree"
