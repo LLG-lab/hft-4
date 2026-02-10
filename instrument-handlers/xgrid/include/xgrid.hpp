@@ -1,8 +1,8 @@
 #include <boost/dll.hpp>
 #include <instrument_handler.hpp>
 #include <money_management.hpp>
+#include <invest_guard.hpp>
 #include <gcell.hpp>
-#include <fcd.hpp>
 
 #ifndef __XGRID_HPP__
 #define __XGRID_HPP__
@@ -35,13 +35,17 @@ private:
     std::map<char, std::pair<int, bool>> get_cell_types(const boost::json::object &obj) const;
     void create_money_manager(const boost::json::object &transactions);
     void parse_instrument_details(const boost::json::object &instrument_details);
+
     void create_grid(const boost::json::object &grid_def);
-    void load_grid(void);
-    void save_grid(void);
+    void create_grid_simple_defined(const boost::json::object &grid_def);
+    void create_grid_full_defined(const boost::json::object &grid_def);
+
+    void load_positions(void);
+    void save_positions(void);
 
     void update_metrics(int bid_pips, double bankroll, boost::posix_time::ptime current_time);
 
-    bool profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const;
+    bool profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time);
     int  get_precedessor_position_index(int index) const;
     bool is_persistent(void) const { return (get_session_mode() == session_mode::PERSISTENT); }
 
@@ -52,10 +56,7 @@ private:
     };
 
     state current_state_;
-    bool concurent_;  // If set, xgrid handlers for various instruments works mutualy excluded on the same balance.
-    bool internal_position_transferring_;
     int max_spread_;
-    int active_gcells_;
     int active_gcells_limit_;
     bool sellout_; // If set, xgrid handler will only sell existing positions.
     double immediate_money_supply_; // Capital outside the brokerage account, ready for immediate replenishment.
@@ -106,8 +107,9 @@ private:
     void await_position_status(void);
 
     std::vector<gcell> gcells_;
+    position_container positions_;
     std::shared_ptr<money_management> mmgmnt_;
-    fcd fcd_;
+    invest_guard iguard_;
 
     unsigned int tick_counter_;
 };

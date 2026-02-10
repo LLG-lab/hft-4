@@ -6,14 +6,13 @@ set(CMAKE_INSTALL_LIBDIR /var/lib/hft/instrument-handlers)
 list(APPEND HEADERS
      ${PROJECT_SOURCE_DIR}/include/xgrid.hpp
      ${PROJECT_SOURCE_DIR}/include/gcell.hpp
-     ${PROJECT_SOURCE_DIR}/include/fcd.hpp
      ${PROJECT_SOURCE_DIR}/include/money_management.hpp
+     ${PROJECT_SOURCE_DIR}/include/invest_guard.hpp
 )
 
 list(APPEND SOURCES
      ${PROJECT_SOURCE_DIR}/xgrid.cpp
      ${PROJECT_SOURCE_DIR}/gcell.cpp
-     ${PROJECT_SOURCE_DIR}/fcd.cpp
      ${PROJECT_SOURCE_DIR}/money_management.cpp
 )
 

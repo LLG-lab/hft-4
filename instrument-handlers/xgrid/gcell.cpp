@@ -1,133 +1,105 @@
 #include <stdexcept>
+#include <algorithm>
 #include <gcell.hpp>
 
-gcell::gcell(int pips_span, int gnumber, bool terminal)
-    : is_terminal_ { terminal },
-      position_id_ { "" },
-      position_volume_ { 0.0 },
-      position_time_ { 0ul },
-      position_price_pips_ { 0 },
-      position_confirmed_ { false }
-{
-    gcell_id_ = std::string("g") + std::to_string(gnumber);
+int gcell::active_gcells_ = 0;
 
+gcell::gcell(position_container &positions, int pips_span, int gnumber, bool terminal)
+    : is_terminal_ { terminal },
+      positions_ {positions},
+      gcell_id_ {gnumber}
+{
     trade_min_limit_ = gnumber*pips_span;
     trade_max_limit_ = trade_min_limit_ + pips_span;
 }
 
-gcell::gcell(int min_limit_pips, int max_limit_pips, int gnumber, bool terminal)
+gcell::gcell(position_container &positions, int min_limit_pips, int max_limit_pips, int gnumber, bool terminal)
     : is_terminal_ { terminal },
-      position_id_ { "" },
-      position_volume_ { 0.0 },
-      position_time_ { 0ul },
-      position_price_pips_ { 0 },
-      position_confirmed_ { false }
+      positions_ {positions},
+      gcell_id_ {gnumber}
 {
-    gcell_id_ = std::string("g") + std::to_string(gnumber);
-
     trade_min_limit_ = min_limit_pips;
     trade_max_limit_ = max_limit_pips;
 }
 
-void gcell::confirm_position(void)
+void gcell::assign_position(position_container::iterator it)
 {
-    if (has_position())
+    if (std::find(cell_positions_.begin(), cell_positions_.end(), it) == cell_positions_.end())
     {
-        if (position_price_pips_ <= 0)
+        cell_positions_.push_back(it);
+        it -> gcell_number_ = gcell_id_;
+
+        if (it -> position_id_ != "virtual")
         {
-            std::string error_message = "Position ‘" + position_id_
-                                        + "’ in gelement #"
-                                        + get_id() + " has not assigned price";
-
-            throw std::runtime_error(error_message);
+            ++gcell::active_gcells_;
         }
-
-        position_confirmed_ = true;
     }
 }
 
-void gcell::confirm_position(int position_price_pips)
+void gcell::attach_position(const std::string &position_id, double position_volume, unsigned long position_time)
 {
-    if (has_position())
-    {
-        position_price_pips_ = position_price_pips;
-        position_confirmed_ = true;
-    }
+    position_container::iterator it = positions_.insert(positions_.end(), position_record(position_id, position_volume, position_time));
+    cell_positions_.push_back(it);
+    it -> gcell_number_ = gcell_id_;
+    ++gcell::active_gcells_;
 }
 
-void gcell::attach_position(const std::string &position_id, double position_volume, unsigned long position_time, int &counter)
+void gcell::attach_confirmed_virtual_position(unsigned long position_time, int position_price_pips)
 {
-    if (has_position())
-    {
-        std::string error_message = "Illegal attempt to cover position ‘"
-                                    + position_id_ +  "’ by position ‘"
-                                    + position_id  + "’ in gelement #"
-                                    + get_id();
-
-        throw std::runtime_error(error_message);
-    }
-
-    position_id_ = position_id;
-    position_volume_ = position_volume;
-    position_time_ = position_time;
-    position_price_pips_ = 0;
-    position_confirmed_ = false;
-    counter++;
+    position_container::iterator it = positions_.insert(positions_.end(), position_record("virtual", 1.0, position_time, position_price_pips));
+    cell_positions_.push_back(it);
+    it -> gcell_number_ = gcell_id_;
+    it -> position_confirmed_ = true;
 }
 
-void gcell::attach_position(const std::string &position_id, double position_volume, unsigned long position_time, int position_price_pips, int &counter)
+void gcell::detatch_position(void)
 {
-    attach_position(position_id, position_volume, position_time, counter);
-    position_price_pips_ = position_price_pips;
+    position_container::iterator it = head_pos();
+    detatch_position(it);
 }
 
-void gcell::detatch_position(int &counter)
+void gcell::detatch_position(position_container::iterator it)
 {
-    if (has_position())
-    {
-        position_id_.clear();
-        position_volume_ = 0.0;
-        position_time_ = 0ul;
-        position_price_pips_ = 0;
-        position_confirmed_ = false;
-        counter--;
+    auto rit = std::find(cell_positions_.begin(), cell_positions_.end(), it);
 
+    if (rit == cell_positions_.end())
+    {
         return;
     }
+
+    if (it -> position_id_ != "virtual")
+    {
+        --gcell::active_gcells_;
+    }
+
+    cell_positions_.erase(rit);
+    positions_.erase(it);
 }
 
-void gcell::reloc_position(gcell &cell)
+position_container::iterator gcell::head_pos(void)
 {
-    if (! cell.has_position())
+    if (cell_positions_.empty())
     {
-        std::string error_message = "Source gelement #"
-                                    + cell.get_id()
-                                    + " has no position";
+        std::string error_message = "No position in cell #"
+                                    + std::to_string(gcell_id_);
 
         throw std::runtime_error(error_message);
     }
-
-    if (has_position())
+    else if (cell_positions_.size() == 1)
     {
-        std::string error_message = "Illegal attempt to cover position ‘"
-                                    + position_id_
-                                    + "’ by position ‘"
-                                    + cell.position_id_
-                                    + "’ in gelement #"
-                                    + get_id();
-
-        throw std::runtime_error(error_message);
+        return *(cell_positions_.begin());
     }
 
-    position_id_ = cell.position_id_;
-    position_volume_ = cell.position_volume_;
-    position_time_ = cell.position_time_;
-    position_price_pips_ = cell.position_price_pips_;
-    position_confirmed_ = cell.position_confirmed_;
+    std::list<position_container::iterator>::iterator my_it = cell_positions_.begin();
 
-    cell.position_id_.clear();
-    cell.position_volume_ = 0.0;
-    cell.position_time_ = 0ul;
-    cell.position_price_pips_ = 0;
-    cell.position_confirmed_ = false;
+    for (std::list<position_container::iterator>::iterator it = cell_positions_.begin(); it != cell_positions_.end(); it++)
+    {
+        if ( (*it) -> position_price_pips_ < (*my_it) -> position_price_pips_)
+        {
+            my_it = it;
+        }
+    }
+
+    return (*my_it);
 }
+

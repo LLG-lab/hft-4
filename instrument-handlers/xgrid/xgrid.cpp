@@ -11,15 +11,13 @@
 #define hft_log(__X__) \
     CLOG(__X__, get_logger_id().c_str())
 
-namespace hft_ih_plugin {
+namespace hft_ih_plugin
+{
 
 xgrid::xgrid(const instrument_handler::init_info &general_config)
     : instrument_handler(general_config),
       current_state_ {state::OPERATIONAL},
-      concurent_ {false},
-      internal_position_transferring_ {false},
       max_spread_ {0xFFFF},
-      active_gcells_ {0},
       active_gcells_limit_ {0},
       sellout_ {false},
       immediate_money_supply_ {0.0},
@@ -30,13 +28,12 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
       used_cells_alarm_ {0},
       user_alarmed_ {false},
       positions_confirmed_ {false},
-      awaiting_position_status_counter_ {false},
-      fcd_ {session_variable("xgrid.fcd_actions")},
+      awaiting_position_status_counter_ {0},
       tick_counter_ {0ul}
 {
     el::Loggers::getLogger(get_logger_id().c_str(), true);
 
-    hft_log(INFO) << "Starting instrument handler ‘eXtended Grid™’ for instrument ‘"
+    hft_log(INFO) << "Starting instrument handler ‘eXtended Grid™ version 2’ for instrument ‘"
                   << get_ticker() << "’, i.e. ‘"
                   << get_instrument_description()
                   << "’";
@@ -50,7 +47,6 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
     //
     //  "handler_options": {
-    //      "concurent": false,                      /* Optional, default: false */
     //      "transactions": {
     //          .
     //          .
@@ -61,13 +57,7 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     //          .
     //          .
     //      },
-    //      "fcd": {                                 /* Optional. Disabled if undefined"
-    //          "enabled": true,
-    //          "depth_fall_cutoff": 2
-    //      },
-    //      "internal_position_transferring": false, /* Optional, default: false */
     //      "max_spread": 12,
-    //      "dayswap_pips":-0.3,
     //      "active_gcells_limit":10, /* Optional, default: gcells */
     //      "used_cells_alarm":20,    /* Optional, default: 0 (disabled) */
     //      "sellout":false,          /* Optional, default: false */
@@ -76,6 +66,11 @@ void xgrid::init_handler(const boost::json::object &specific_config)
     //           .
     //           .
     //           .
+    //      },
+    //      "invest_guard": {         /* Optional */
+    //          "enabled": true,
+    //          "alpha": 0.34,
+    //          "beta": 0.99879
     //      }
     //  }
     //
@@ -97,54 +92,6 @@ void xgrid::init_handler(const boost::json::object &specific_config)
         const boost::json::object &instrument_details = json_get_object_attribute(specific_config, "instrument_details");
 
         parse_instrument_details(instrument_details);
-
-        //
-        // Parse FCD (Flash - Crash Detector) section.
-        //
-
-        if (json_exist_attribute(specific_config, "fcd"))
-        {
-            const boost::json::object &fcd_jobject = json_get_object_attribute(specific_config, "fcd");
-
-            if (! json_exist_attribute(fcd_jobject, "enabled"))
-            {
-                std::string msg = "Undefined Flash - Crash Detector enable state";
-
-                throw std::runtime_error(msg.c_str());
-            }
-
-            if (json_get_bool_attribute(fcd_jobject, "enabled"))
-            {
-                fcd_.enable();
-
-                if (! json_exist_attribute(fcd_jobject, "depth_fall_cutoff"))
-                {
-                    std::string msg = "Undefined ‘depth_fall_cutoff’ in ‘fcd’ section";
-
-                    throw std::runtime_error(msg.c_str());
-                }
-
-                int dfc = json_get_int_attribute(fcd_jobject, "depth_fall_cutoff");
-
-                fcd_.setup_dfc(dfc);
-
-                hft_log(INFO) << "init: Flash - Crash Detector is enabled for handler. "
-                              << " ‘depth_fall_cutoff’ is set to ‘" << dfc << "’.";
-            }
-            else
-            {
-                hft_log(INFO) << "init: Flash - Crash Detector is disabled for handler.";
-            }
-        }
-        else
-        {
-            hft_log(INFO) << "init: Flash - Crash Detector is disabled for handler.";
-        }
-
-        if (json_exist_attribute(specific_config, "internal_position_transferring"))
-        {
-            internal_position_transferring_ = json_get_bool_attribute(specific_config, "internal_position_transferring");
-        }
 
         max_spread_ = json_get_int_attribute(specific_config, "max_spread");
 
@@ -236,11 +183,15 @@ void xgrid::init_handler(const boost::json::object &specific_config)
                           << "]" << (x.is_terminal() ? " (terminal)" : "");
         }
 
+        int range_min, range_max;
+
         for (auto it = gcells_.begin(); it != gcells_.end(); it++)
         {
             if (! it -> is_terminal())
             {
                 hft_log(INFO) << "init: Trades from " << pips2floating(it -> get_min_limit());
+
+                range_min = it -> get_min_limit();
 
                 break;
             }
@@ -251,6 +202,8 @@ void xgrid::init_handler(const boost::json::object &specific_config)
             if (! it -> is_terminal())
             {
                 hft_log(INFO) << "init: Trades to " << pips2floating(it -> get_max_limit());
+
+                range_max = it -> get_max_limit();
 
                 break;
             }
@@ -275,18 +228,30 @@ void xgrid::init_handler(const boost::json::object &specific_config)
                       << "pips, optimistic – " << max_optimistic_loss
                       << "pips.";
 
+        load_positions();
 
-        if (json_exist_attribute(specific_config, "concurent"))
+        //
+        // Invest guard configuration.
+        //
+
+        if (json_exist_attribute(specific_config, "invest_guard"))
         {
-            if (json_get_bool_attribute(specific_config, "concurent"))
+            const boost::json::object &invest_guard_json = json_get_object_attribute(specific_config, "invest_guard");
+
+            bool enabled = json_get_bool_attribute(invest_guard_json, "enabled");
+            double alpha = json_get_double_attribute(invest_guard_json, "alpha");
+            double beta  = json_get_double_attribute(invest_guard_json, "beta");
+
+            if (enabled)
             {
-                concurent_ = true;
-
-                hft_log(INFO) << "init: Handler is concurent";
+                iguard_.enable();
             }
-        }
 
-        load_grid();
+            iguard_.setup_range(range_min, range_max);
+            iguard_.set_alpha(alpha);
+            iguard_.set_beta(beta);
+            iguard_.set_pain_svr(session_variable("xgrid.invest_guard.pain"));
+        }
     }
     catch (const std::runtime_error &e)
     {
@@ -303,11 +268,11 @@ void xgrid::init_handler(const boost::json::object &specific_config)
 
 void xgrid::on_sync(const hft::protocol::request::sync &msg, hft::protocol::response &market)
 {
-    for (int i = 0; i < gcells_.size(); i++)
+    for (position_container::iterator it = positions_.begin(); it != positions_.end(); ++it)
     {
-        if (gcells_[i].has_position() && gcells_[i].get_position_id() == msg.id)
+        if (it -> position_id_ == msg.id)
         {
-            gcells_[i].confirm_position();
+            it -> position_confirmed_ = true;
 
             return;
         }
@@ -342,6 +307,8 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
     {
         return;
     }
+
+    iguard_.tick(ask_pips, request_timestamp);
 
     int index = -1;
 
@@ -378,9 +345,9 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
         if (precedessor_index < 0) // Conditions (I).
         {
-            if (active_gcells_ < active_gcells_limit_ && !sellout_)
+            if (gcell::active_cells() < active_gcells_limit_ && !sellout_)
             {
-                if (fcd_.can_open_position())
+                if (iguard_.can_play())
                 {
                     double bankroll = msg.equity + immediate_money_supply_;
                     double num_of_lots = mmgmnt_ -> get_number_of_lots(bankroll);
@@ -389,7 +356,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
                     {
                         auto pos_id = uid();
                         market.open_long(pos_id, num_of_lots);
-                        gcells_[index].attach_position(pos_id, num_of_lots, request_timestamp, active_gcells_);
+                        gcells_[index].attach_position(pos_id, num_of_lots, request_timestamp);
 
                         hft_log(INFO) << "Opening position ‘"
                                       << pos_id << "’ in cell #"
@@ -406,28 +373,22 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
                         hft_log(INFO) << "Insufficient volume to open position on market, "
                                       << "creating Virtual Position instead.";
 
-                        int drop = 0;
-                        gcells_[index].attach_position("virtual", 1.0, request_timestamp, drop);
-                        gcells_[index].confirm_position(ask_pips);
-                        fcd_.feed(fcd::action::OPEN_POS);
-                        save_grid();
+                        gcells_[index].attach_confirmed_virtual_position(request_timestamp, ask_pips);
+
+                        save_positions();
                     }
                 }
                 else
                 {
-                    hft_log(INFO) << "Refusal to open a position by Flash – Crash Detector, "
-                                  << "creating Virtual Position instead.";
-
-                    int drop = 0;
-                    gcells_[index].attach_position("virtual", 1.0, request_timestamp, drop);
-                    gcells_[index].confirm_position(ask_pips);
-                    fcd_.feed(fcd::action::OPEN_POS);
-                    save_grid();
+                    if ((tick_counter_ % 500) == 0)
+                    {
+                        hft_log(INFO) << "Refusal to open a position by Invest Guard.";
+                    }
                 }
             }
             else
             {
-                if ((tick_counter_ % 500) == 0)
+                if (!sellout_ && (tick_counter_ % 500) == 0)
                 {
                     hft_log(INFO) << "Cannot open position, since amount "
                                   << "of active gcells has reached the limit ‘"
@@ -437,19 +398,10 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
             return;
         }
-        else  // Condition (II).
+        else
         {
-            if (internal_position_transferring_)
-            {
-                auto pos_id = gcells_[precedessor_index].get_position_id();
-                gcells_[index].reloc_position(gcells_[precedessor_index]);
-
-                hft_log(INFO) << "Internal transfered position ‘" << pos_id
-                              << "’: #" << gcells_[precedessor_index].get_id()
-                              << " → #" << gcells_[index].get_id() << ".";
-
-                save_grid();
-            }
+            // Condition (II) – do nothing.
+            // Because we have to close position from cell of precedessor_index first.
         }
     }
 
@@ -469,13 +421,9 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
             {
                 hft_log(INFO) << "Closing Virtual Position.";
 
-                int drop = 1;
+                gcells_[i].detatch_position();
 
-                gcells_[i].detatch_position(drop);
-
-                fcd_.feed(fcd::action::CLOSE_POS);
-
-                save_grid();
+                save_positions();
             }
             else
             {
@@ -491,63 +439,21 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
         }
     }
 
-    if (fcd_.is_enabled())
-    {
-        //
-        // Attempt to liquidate pyramid of all virtual
-        // positions from index + 1 to end.
-        //
-
-        int virtual_closed = 0;
-
-        for (int i = index + 1; i < gcells_.size(); i++)
-        {
-            if (gcells_[i].has_position() && gcells_[i].get_position_id() == "virtual")
-            {
-                //
-                // Detatching without feeding fcd.
-                //
-
-                gcells_[i].detatch_position(virtual_closed);
-            }
-        }
-
-        virtual_closed *= (-1);
-
-        if (virtual_closed > 0)
-        {
-            hft_log(INFO) << "Closed extra " << virtual_closed
-                          << " Virtual Position(s).";
-
-            save_grid();
-        }
-    }
-
     //
     // Check for user alarm.
     //
 
     if (used_cells_alarm_ > 0 && ! user_alarmed_)
     {
-        int opened_positions = 0;
-
-        for (auto &cell : gcells_)
-        {
-            if (cell.has_position() && cell.get_position_id() != "virtual")
-            {
-                opened_positions++;
-            }
-        }
-
-        if (opened_positions >= used_cells_alarm_)
+        if (gcell::active_cells() >= used_cells_alarm_)
         {
             std::string message = "HFT handler msg: " + get_ticker_fmt2()
-                                  + " opened " + std::to_string(opened_positions)
+                                  + " opened " + std::to_string(gcell::active_cells())
                                   + "th position";
 
             user_alarmed_ = true;
             sms_alert(message);
-            save_grid();
+            save_positions();
         }
     }
 }
@@ -559,32 +465,47 @@ void xgrid::on_position_open(const hft::protocol::request::open_notify &msg, hft
         hft_log(ERROR) << "position_open: Unexpected position open notify";
     }
 
-    for (int i = 0; i < gcells_.size(); i++)
+    auto it = positions_.begin();
+
+    while (it != positions_.end())
     {
-        if (gcells_[i].has_position() && gcells_[i].get_position_id() == msg.id)
+        if (it -> position_id_ == msg.id)
         {
             if (msg.status)
             {
-                gcells_[i].confirm_position(floating2pips(msg.price));
-
-                fcd_.feed(fcd::action::OPEN_POS);
-
                 hft_log(INFO) << "position_open: Position ‘" << msg.id
                               << "’ successfuly opened, price was "
                               << msg.price;
 
-                save_grid();
+                it -> position_price_pips_ = floating2pips(msg.price);
+                it -> position_confirmed_ = true;
+
+                save_positions();
             }
             else
             {
-                gcells_[i].detatch_position(active_gcells_);
-
                 hft_log(INFO) << "position_open: Failed to open position ‘"
                               << msg.id << "’.";
+
+                if (it -> gcell_number_ >= 0)
+                {
+                    gcells_[it -> gcell_number_].detatch_position(it);
+                }
+                else
+                {
+                     // Sytuacja, gdy pozycja znajduje się na liście positions_
+                     // Lecz nie jest zarządzana przez grid (bo na przykład
+                     // architektura grida uległa zmianie i pozycja nie trafiła
+                     // w przedziały), natomiast pozycja została zamknięta
+                     // „z ręki”.
+                     // XXX: To nigdy nie bedzie miało miejsca w przypadku otwierania.
+                }
             }
 
             break;
         }
+
+        ++it;
     }
 
     current_state_ = state::OPERATIONAL;
@@ -600,21 +521,36 @@ void xgrid::on_position_close(const hft::protocol::request::close_notify &msg, h
 
     if (msg.status)
     {
-        for (int i = 0; i < gcells_.size(); i++)
+        auto it = positions_.begin();
+
+        while (it != positions_.end())
         {
-            if (gcells_[i].has_position() && gcells_[i].get_position_id() == msg.id)
+            if (it -> position_id_ == msg.id)
             {
-                gcells_[i].detatch_position(active_gcells_);
+                if (it -> gcell_number_ >= 0)
+                {
+                    gcells_[it -> gcell_number_].detatch_position(it);
+                }
+                else
+                {
+                    // Sytuacja, gdy pozycja znajduje się na liście positions_
+                    // Lecz nie jest zarządzana przez grid (bo na przykład
+                    // architektura grida uległa zmianie i pozycja nie trafiła
+                    // w przedziały), natomiast pozycja została zamknięta
+                    // „z ręki”.
 
-                fcd_.feed(fcd::action::CLOSE_POS);
+                    positions_.erase(it);
+                }
 
-                save_grid();
+                save_positions();
 
                 hft_log(INFO) << "position_close: Closed position ‘"
                               << msg.id << "’, price: " << msg.price;
 
                 break;
             }
+
+            ++it;
         }
     }
     else
@@ -639,20 +575,17 @@ void xgrid::update_metrics(int bid_pips, double bankroll, boost::posix_time::pti
         return;
     }
 
-    int opened_positions = 0;
     double total_expense = 0.0;
 
-    for (auto &cell : gcells_)
+    for (auto &pos : positions_)
     {
-        if (cell.has_position())
+        if (pos.position_id_ != "virtual")
         {
-            opened_positions++;
-
-            int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(cell.get_position_timestamp()).date()).days();
-            double swaps_expense = long_dayswap_per_lot_ * cell.get_position_volume() * days_elapsed;
-            double yield = pip_value_per_lot_ * cell.get_position_volume() * (bid_pips - cell.get_position_price_pips());
-            double req_margin = margin_required_per_lot_ * cell.get_position_volume();
-            double commission = commission_per_lot_ * cell.get_position_volume();
+            int days_elapsed = (current_time.date() - hft::utils::timestamp2ptime(pos.position_time_).date()).days();
+            double swaps_expense = long_dayswap_per_lot_ * (pos.position_volume_) * days_elapsed;
+            double yield = pip_value_per_lot_ * (pos.position_volume_) * (bid_pips - pos.position_price_pips_);
+            double req_margin = margin_required_per_lot_ * (pos.position_volume_);
+            double commission = commission_per_lot_ * (pos.position_volume_);
 
             total_expense += (yield + swaps_expense - req_margin - commission);
         }
@@ -661,10 +594,10 @@ void xgrid::update_metrics(int bid_pips, double bankroll, boost::posix_time::pti
     double percentage_use_of_margin = (((-1.0)*total_expense) / bankroll) * 100;
 
     setup_percentage_use_of_margin_metric(percentage_use_of_margin);
-    setup_opened_positions_metric(opened_positions);
+    setup_opened_positions_metric(gcell::active_cells());
 }
 
-bool xgrid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time) const
+bool xgrid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time)
 {
     //
     // Swaps by the design are not taken into account when calculating profitability,
@@ -852,6 +785,143 @@ void xgrid::parse_instrument_details(const boost::json::object &instrument_detai
 
 void xgrid::create_grid(const boost::json::object &grid_def)
 {
+    std::string definition_type = json_get_string_attribute(grid_def, "definition_type");
+
+    if (definition_type == "SIMPLE")
+    {
+        create_grid_simple_defined(grid_def);
+    }
+    else if (definition_type == "FULL")
+    {
+        create_grid_full_defined(grid_def);
+    }
+    else
+    {
+        std::string err_msg = "Unrecognized grid definition type ‘"
+                              + definition_type + "’.";
+
+        throw std::runtime_error(err_msg);
+    }
+}
+
+void xgrid::create_grid_simple_defined(const boost::json::object &grid_def)
+{
+    //
+    // Example:
+    //
+    // {
+    //     "start_price" : 0.98765,
+    //     "end_price" : 1.23456,
+    //     "ncells" : 40,             /* Optionally, alternative to cell_pips_span */
+    //     "cell_pips_span" : 20      /* Optionally, alternative to ncells */
+    // }
+    //
+
+    //
+    // Get ‘start_price’ attribute.
+    //
+
+    double start_price = json_get_double_attribute(grid_def, "start_price");
+
+    if (start_price < 0.0)
+    {
+        std::string msg = "Attribute ‘start_price’ must not be negative value, got "
+                          + std::to_string(json_get_double_attribute(grid_def, "start_price"));
+
+        throw std::runtime_error(msg.c_str());
+    }
+
+    int start_price_pips = floating2pips(start_price);
+
+    //
+    // Get ‘end_price’ attribute.
+    //
+
+    double end_price = json_get_double_attribute(grid_def, "end_price");
+
+    if (end_price < 0.0)
+    {
+        std::string msg = "Attribute ‘end_price’ must not be negative value, got "
+                          + std::to_string(json_get_double_attribute(grid_def, "end_price"));
+
+        throw std::runtime_error(msg.c_str());
+    }
+
+    int end_price_pips = floating2pips(end_price);
+
+    int game_area = end_price_pips - start_price_pips;
+
+    if (game_area < 1)
+    {
+        std::string msg = "Attribute ‘end_price’ must be greater than "
+                          "‘start_price’ by at least one pips. Got start_price="
+                          + std::to_string(start_price) + ", end_price="
+                          + std::to_string(end_price);
+
+        throw std::runtime_error(msg.c_str());
+    }
+
+    int cells_pips_span = 0;
+    int ncells = 0;
+    int r = 0;
+
+    if (json_exist_attribute(grid_def, "ncells"))
+    {
+        ncells = json_get_int_attribute(grid_def, "ncells");
+
+        if (ncells < 1)
+        {
+            std::string msg = "Attribute ‘ncells’ must be greater than 1, got "
+                              + std::to_string(ncells);
+
+            throw std::runtime_error(msg.c_str());
+        }
+
+        cells_pips_span = game_area / ncells;
+        r = game_area % ncells;
+    }
+    else if (json_exist_attribute(grid_def, "cells_pips_span"))
+    {
+        cells_pips_span = json_get_int_attribute(grid_def, "cells_pips_span");
+
+        if (cells_pips_span < 1)
+        {
+            std::string msg = "Attribute ‘cells_pips_span’ must be greater than 1, got "
+                              + std::to_string(cells_pips_span);
+
+            throw std::runtime_error(msg.c_str());
+        }
+
+        ncells = game_area / cells_pips_span;
+        r = game_area % cells_pips_span;
+    }
+    else
+    {
+        throw std::runtime_error("Neither attribute ‘ncells’ nor attribute ‘cells_pips_span’ is defined");
+    }
+
+    int gnumber = 0;
+
+    end_price_pips = start_price_pips + cells_pips_span + r;
+    gcells_.emplace_back(positions_, start_price_pips, end_price_pips, gnumber++, false);
+
+    for (int i = 1; i < ncells; i++)
+    {
+        start_price_pips = end_price_pips;
+        end_price_pips += cells_pips_span;
+
+        gcells_.emplace_back(positions_, start_price_pips, end_price_pips, gnumber++, false);
+    }
+
+    //
+    // Terminal 400-pips-span extra cell.
+    //
+
+    gcells_.emplace_back(positions_, end_price_pips, end_price_pips + 400, gnumber++, true);
+}
+
+void xgrid::create_grid_full_defined(const boost::json::object &grid_def)
+{
     //
     // Example:
     //
@@ -920,9 +990,8 @@ void xgrid::create_grid(const boost::json::object &grid_def)
 
         end_price_pips = start_price_pips + cell_types[architecture[i]].first;
         terminal = cell_types[architecture[i]].second;
-        gnumber++;
 
-        gcells_.emplace_back(start_price_pips, end_price_pips, gnumber, terminal);
+        gcells_.emplace_back(positions_, start_price_pips, end_price_pips, gnumber++, terminal);
 
         start_price_pips = end_price_pips;
     }
@@ -933,7 +1002,7 @@ void xgrid::create_grid(const boost::json::object &grid_def)
     }
 }
 
-void xgrid::load_grid(void)
+void xgrid::load_positions(void)
 {
     using namespace boost::json;
 
@@ -946,11 +1015,11 @@ void xgrid::load_grid(void)
 
     try
     {
-        json_data = file_get_contents("grid.json");
+        json_data = file_get_contents("positions.json");
     }
     catch (const std::runtime_error &e)
     {
-        hft_log(WARNING) << "load grid: Unalbe to load file ‘grid.json’";
+        hft_log(WARNING) << "load grid: Unalbe to load file ‘positions.json’";
 
         return;
     }
@@ -963,12 +1032,12 @@ void xgrid::load_grid(void)
     }
     catch (const system_error &e)
     {
-        throw std::runtime_error("Failed to parse file ‘grid.json’");
+        throw std::runtime_error("Failed to parse file ‘positions.json’");
     }
 
     if (jv.kind() != kind::object)
     {
-        throw std::runtime_error("Invalid file ‘grid.json’");
+        throw std::runtime_error("Invalid file ‘positions.json’");
     }
 
     object const &obj = jv.get_object();
@@ -978,9 +1047,18 @@ void xgrid::load_grid(void)
     unsigned long position_timestamp;
     int position_price_pips;
 
-    for (int i = 0; i < gcells_.size(); i++)
+    std::string candidate_obj_id;
+    int x = 0;
+    while (true)
     {
-        const object &position_info_obj = json_get_object_attribute(obj, gcells_[i].get_id());
+        candidate_obj_id = "g" + std::to_string(++x);
+
+        if (! json_exist_attribute(obj, candidate_obj_id))
+        {
+            break;
+        }
+
+        const object &position_info_obj = json_get_object_attribute(obj, candidate_obj_id);
 
         position_id = json_get_string_attribute(position_info_obj, "id");
 
@@ -990,29 +1068,19 @@ void xgrid::load_grid(void)
             position_timestamp  = boost::lexical_cast<unsigned long>(json_get_string_attribute(position_info_obj, "time"));
             position_price_pips = json_get_int_attribute(position_info_obj, "price_pips");
 
-            hft_log(INFO) << "load grid: Attaching position ‘"
-                          << position_id << "’ to cell #"
-                          << gcells_[i].get_id() << " (price pips: "
+            hft_log(INFO) << "load positions: Attaching position ‘"
+                          << position_id << "’ to set: (price pips: "
                           << position_price_pips << ", lots: "
                           << position_volume << ", opened: "
                           << hft::utils::timestamp2string(position_timestamp)
                           << ").";
 
-            if (position_id == "virtual")
-            {
-                int drop = 0;
-
-                gcells_[i].attach_position(position_id, position_volume, position_timestamp, position_price_pips, drop);
-            }
-            else
-            {
-                gcells_[i].attach_position(position_id, position_volume, position_timestamp, position_price_pips, active_gcells_);
-            }
+            positions_.emplace_back(position_id, position_volume, position_timestamp, position_price_pips);
         }
     }
 
-    hft_log(INFO) << "load grid: Active gcells: ‘"
-                  << active_gcells_ << "’";
+    hft_log(INFO) << "load positions: Total known positions: ‘"
+                  << positions_.size() << "’";
 
     if (json_exist_attribute(obj, "user_alarmed"))
     {
@@ -1020,7 +1088,7 @@ void xgrid::load_grid(void)
     }
 }
 
-void xgrid::save_grid(void)
+void xgrid::save_positions(void)
 {
     if (! is_persistent())
     {
@@ -1035,12 +1103,16 @@ void xgrid::save_grid(void)
               << (user_alarmed_ ? "true" : "false")
               << ",\n";
 
-    for (int i = 0; i < gcells_.size(); i++)
+    std::string candidate_obj_id;
+    int x = 0;
+    for (const position_record &p : positions_)
     {
-        if (i > 0)
+        if (x > 0)
         {
             json_data << ",\n";
         }
+
+        candidate_obj_id =  "g" + std::to_string(++x);
 
         //
         // {
@@ -1049,16 +1121,16 @@ void xgrid::save_grid(void)
         // }
         //
 
-        json_data << "\t\"" << gcells_[i].get_id() << "\":{\"id\":\""
-                  << gcells_[i].get_position_id() << "\",\"volume\":"
-                  << gcells_[i].get_position_volume() << ",\"time\":\""
-                  << gcells_[i].get_position_timestamp() << "\",\"price_pips\":"
-                  << gcells_[i].get_position_price_pips() << "}";
+        json_data << "\t\"" << candidate_obj_id << "\":{\"id\":\""
+                  << p.position_id_ << "\",\"volume\":"
+                  << p.position_volume_ << ",\"time\":\""
+                  << p.position_time_ << "\",\"price_pips\":"
+                  << p.position_price_pips_ << "}";
     }
 
     json_data << "\n}\n";
 
-    file_put_contents("grid.json", json_data.str());
+    file_put_contents("positions.json", json_data.str());
 }
 
 void xgrid::verify_position_confirmation_status(void)
@@ -1070,29 +1142,63 @@ void xgrid::verify_position_confirmation_status(void)
 
     bool to_be_save = false;
 
-    for (int i = 0; i < gcells_.size(); i++)
+    position_container::iterator it = positions_.begin();
+
+    while (it != positions_.end())
     {
-        if (gcells_[i].has_position() && ! gcells_[i].has_position_confirmed())
+        if (! it -> position_confirmed_)
         {
-            if (gcells_[i].get_position_id() == "virtual")
+            if (it -> position_id_ == "virtual")
             {
-                gcells_[i].confirm_position();
+                it -> position_confirmed_ = true;
             }
             else
             {
-                hft_log(WARNING) << "Position ‘" << gcells_[i].get_position_id()
-                                 << "’ does not exist on market anymore, removing from grid.";
+                hft_log(WARNING) << "Position ‘" << (it -> position_id_)
+                                 << "’ does not exist on market anymore, removing from set.";
 
-                gcells_[i].detatch_position(active_gcells_);
+                it = positions_.erase(it);
 
                 to_be_save = true;
+
+                continue;
             }
+        }
+
+        ++it;
+    }
+
+    //
+    // Assign positions to the grid cells.
+    //
+
+    for (int i = 0; i < gcells_.size(); i++)
+    {
+        for (it = positions_.begin(); it != positions_.end(); it++)
+        {
+            if (! gcells_[i].is_terminal() && gcells_[i].inside_trading_zone(it -> position_price_pips_) && (it -> gcell_number_ < 0))
+            {
+                hft_log(INFO) << "Position ‘" << (it -> position_id_)
+                              << "’ assigned to cell #" << i << ".";
+
+                gcells_[i].assign_position(it);
+                //it -> gcell_number_ = i;
+            }
+        }
+    }
+
+    for (auto &p : positions_)
+    {
+        if (p.gcell_number_ < 0)
+        {
+            hft_log(WARNING) << "Position ‘" << (p.position_id_) << "’"
+                             << " Unmanaged – not assigned to any cell.";
         }
     }
 
     if (to_be_save)
     {
-        save_grid();
+        save_positions();
     }
 
     positions_confirmed_ = true;
@@ -1108,14 +1214,26 @@ void xgrid::await_position_status(void)
 
         if (awaiting_position_status_counter_ > max_aps_counter_value)
         {
-            for (int i = 0; i < gcells_.size(); i++)
-            {
-                if (gcells_[i].has_position() && ! gcells_[i].has_position_confirmed())
-                {
-                    hft_log(WARNING) << "Position ‘" << gcells_[i].get_position_id()
-                                     << "’ has not been confirmed within defined time, removing from grid.";
+            auto it = positions_.begin();
 
-                    gcells_[i].detatch_position(active_gcells_);
+            while (it != positions_.end())
+            {
+                if (! it -> position_confirmed_)
+                {
+                    auto it2 = it;
+                    ++it2;
+
+                    hft_log(WARNING) << "Position ‘" << (it -> position_id_)
+                                     << "’ managed by gcell #" << (it -> gcell_number_)
+                                     << " has not been confirmed to be existent by broker within defined time, removing.";
+
+                    gcells_[it -> gcell_number_].detatch_position(it);
+
+                    it = it2;
+                }
+                else
+                {
+                    ++it;
                 }
             }
 
