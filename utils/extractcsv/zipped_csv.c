@@ -134,7 +134,7 @@ int zipped_csv_read_all_records(const char *zip_name, on_record_function f)
     // Skip header.
     GOTO_NEXT_LINE()
 
-    // 20.01.2025 00:00:00.266,1.028060,1.028050,0.00,0.00
+    // 20.01.2020 00:00:00.266,1.028060,1.028050,0.00,0.00
     int day, month, year, hour, minute, second, microsecond;
     int a[4];
 

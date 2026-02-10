@@ -2,7 +2,7 @@
 **                                                                    **
 **             -=≡≣ High Frequency Trading System ® ≣≡=-              **
 **                                                                    **
-**          Copyright © 2017 - 2025 by LLG Ryszard Gradowski          **
+**          Copyright © 2017 - 2026 by LLG Ryszard Gradowski          **
 **                       All Rights Reserved.                         **
 **                                                                    **
 **  CAUTION! This application is an intellectual property             **
@@ -82,7 +82,7 @@ public class Main {
 
         if (config.shouldHelp()) {
             System.out.println("hft2ducascopy - HFT ⇌ Dukascopy intermediary program");
-            System.out.println("Copyright © 2017-2025 by LLG Ryszard Gradowski, All Rights Reserved");
+            System.out.println("Copyright © 2017-2026 by LLG Ryszard Gradowski, All Rights Reserved");
             System.out.println("");
             System.out.println("Usage:");
             System.out.println("java -cp  hft-bridge-4.0.0.jar:* hft2ducascopy/Main [options]");

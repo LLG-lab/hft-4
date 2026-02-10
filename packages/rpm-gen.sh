@@ -37,7 +37,7 @@ INSPECT=no
 if [ "x$OPTION" = "x--help" ] || [ "x$OPTION" = "x-h" ] ; then
     echo ""
     echo "RPM-GEN - Centos 7 distribution RPM packages generator for HFT"
-    echo "Copytight (c) 2017 - 2025 by LLG Ryszard Gradowski, All Rights Reserved"
+    echo "Copytight (c) 2017 - 2026 by LLG Ryszard Gradowski, All Rights Reserved"
     echo
     echo "Usage:"
     echo "   $(basename $0) [-h|--help|--inspect]"

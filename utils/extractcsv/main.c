@@ -47,7 +47,7 @@ static struct _config
 static void show_help(void)
 {
     printf("Extract CSV – Extractor historical data into csv from zpiied database\n"
-           "Copyright (c) 2017 - 2025 by LLG Ryszard Gradowski, All Rights Reserved.\n\n"
+           "Copyright (c) 2017 - 2026 by LLG Ryszard Gradowski, All Rights Reserved.\n\n"
            "Usage:\n"
            "    extractcsv <parameter>=<value> ...\n"
            "Mandatory parameters:\n"
