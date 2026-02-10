@@ -56,12 +56,14 @@ public:
     struct emulation_result
     {
         emulation_result(void)
-            : min_equity(std::numeric_limits<double>::max()),
+            : total_withdrawn(0.0),
+              min_equity(std::numeric_limits<double>::max()),
               max_equity(std::numeric_limits<double>::min()),
               bankrupt(false)
         {}
 
         std::list<asacp> trades;
+        double total_withdrawn;
         double min_equity;
         double max_equity;
         bool bankrupt;
@@ -71,7 +73,8 @@ public:
 
     hft_forex_emulator(const std::string &host, const std::string &port, const std::string &sessid,
                            const std::map<std::string, std::string> &instrument_data, double deposit,
-                               const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision);
+                               const std::string &config_file_name, bool check_bankruptcy,
+                                   bool invert_hft_decision, bool immediate_profit_withdrawal);
 
     const emulation_result &get_result(void) const { return emulation_result_; }
 
@@ -177,7 +180,9 @@ private:
     double balance_;
     bool check_bankruptcy_;
     bool invert_hft_decision_;
+    bool immediate_profit_withdrawal_;
     bool forbid_new_positions_;
+    double total_withdrawn_;
 
     instruments_info instruments_;
 };

@@ -20,13 +20,16 @@
 #include <hft_forex_emulator.hpp>
 
 hft_forex_emulator::hft_forex_emulator(const std::string &host, const std::string &port, const std::string &sessid,
-                                                   const std::map<std::string, std::string> &instrument_data, double deposit,
-                                                       const std::string &config_file_name, bool check_bankruptcy, bool invert_hft_decision)
+                                           const std::map<std::string, std::string> &instrument_data, double deposit,
+                                               const std::string &config_file_name, bool check_bankruptcy,
+                                                   bool invert_hft_decision, bool immediate_profit_withdrawal)
     : hft_connection_(host, port),
       balance_(deposit),
       check_bankruptcy_(check_bankruptcy),
       invert_hft_decision_(invert_hft_decision),
-      forbid_new_positions_(false)
+      immediate_profit_withdrawal_(immediate_profit_withdrawal),
+      forbid_new_positions_(false),
+      total_withdrawn_(0.0)
 {
     std::vector<std::string> instruments;
 
@@ -63,6 +66,8 @@ void hft_forex_emulator::proceed(void)
 
             current_equity = get_equity_at_moment();
             current_free_margin = get_free_margin_at_moment(current_equity);
+
+            emulation_result_.total_withdrawn = total_withdrawn_;
 
             if (current_equity < emulation_result_.min_equity) emulation_result_.min_equity = current_equity;
             if (current_equity > emulation_result_.max_equity) emulation_result_.max_equity = current_equity;
@@ -304,7 +309,14 @@ void hft_forex_emulator::handle_close_position(const std::string &id, const tick
     pos.pips_yield  = ps.pips_yield;
     pos.money_yield = ps.money_yield;
 
-    balance_ += pos.money_yield;
+    if (immediate_profit_withdrawal_)
+    {
+        total_withdrawn_ += pos.money_yield;
+    }
+    else
+    {
+        balance_ += pos.money_yield;
+    }
 
     positions_.erase(it);
 

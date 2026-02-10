@@ -73,6 +73,7 @@ void hft_display_filter::display(const hft_forex_emulator::emulation_result &dat
     }
 
     std::cout << "Additional info:\n";
+    std::cout << "total withdrawn: " << data.total_withdrawn << "\n";
     std::cout << "min equity: " << data.min_equity << "\n";
     std::cout << "max equity: " << data.max_equity << "\n";
 
