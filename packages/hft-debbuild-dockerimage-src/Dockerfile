@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 ARG BOOST_DIR=boost_1_81_0
 ARG BOOST_TARBALL=boost_1_81_0.tar.bz2
-ARG BOOST_URL=https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/$BOOST_TARBALL
+ARG BOOST_URL=https://archives.boost.io/release/1.81.0/source/$BOOST_TARBALL
 RUN echo 'APT::Install-Suggests "0";' >> /etc/apt/apt.conf.d/00-docker
 RUN echo 'APT::Install-Recommends "0";' >> /etc/apt/apt.conf.d/00-docker
 ENV TZ=US \
