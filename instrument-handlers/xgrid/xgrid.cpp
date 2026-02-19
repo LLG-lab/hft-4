@@ -29,6 +29,7 @@ xgrid::xgrid(const instrument_handler::init_info &general_config)
       user_alarmed_ {false},
       positions_confirmed_ {false},
       awaiting_position_status_counter_ {0},
+      opened_positions_counter_ {0},
       tick_counter_ {0ul}
 {
     el::Loggers::getLogger(get_logger_id().c_str(), true);
@@ -345,7 +346,7 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
         if (precedessor_index < 0) // Conditions (I).
         {
-            if (gcell::active_cells() < active_gcells_limit_ && !sellout_)
+            if (opened_positions_counter_ < active_gcells_limit_ && !sellout_)
             {
                 if (iguard_.can_play())
                 {
@@ -445,10 +446,10 @@ void xgrid::on_tick(const hft::protocol::request::tick &msg, hft::protocol::resp
 
     if (used_cells_alarm_ > 0 && ! user_alarmed_)
     {
-        if (gcell::active_cells() >= used_cells_alarm_)
+        if (opened_positions_counter_ >= used_cells_alarm_)
         {
             std::string message = "HFT handler msg: " + get_ticker_fmt2()
-                                  + " opened " + std::to_string(gcell::active_cells())
+                                  + " opened " + std::to_string(opened_positions_counter_)
                                   + "th position";
 
             user_alarmed_ = true;
@@ -594,7 +595,7 @@ void xgrid::update_metrics(int bid_pips, double bankroll, boost::posix_time::pti
     double percentage_use_of_margin = (((-1.0)*total_expense) / bankroll) * 100;
 
     setup_percentage_use_of_margin_metric(percentage_use_of_margin);
-    setup_opened_positions_metric(gcell::active_cells());
+    setup_opened_positions_metric(opened_positions_counter_);
 }
 
 bool xgrid::profitable(int cell_index, int bid_pips, boost::posix_time::ptime current_time)
@@ -903,21 +904,21 @@ void xgrid::create_grid_simple_defined(const boost::json::object &grid_def)
     int gnumber = 0;
 
     end_price_pips = start_price_pips + cells_pips_span + r;
-    gcells_.emplace_back(positions_, start_price_pips, end_price_pips, gnumber++, false);
+    gcells_.emplace_back(opened_positions_counter_, positions_, start_price_pips, end_price_pips, gnumber++, false);
 
     for (int i = 1; i < ncells; i++)
     {
         start_price_pips = end_price_pips;
         end_price_pips += cells_pips_span;
 
-        gcells_.emplace_back(positions_, start_price_pips, end_price_pips, gnumber++, false);
+        gcells_.emplace_back(opened_positions_counter_, positions_, start_price_pips, end_price_pips, gnumber++, false);
     }
 
     //
     // Terminal 400-pips-span extra cell.
     //
 
-    gcells_.emplace_back(positions_, end_price_pips, end_price_pips + 400, gnumber++, true);
+    gcells_.emplace_back(opened_positions_counter_, positions_, end_price_pips, end_price_pips + 400, gnumber++, true);
 }
 
 void xgrid::create_grid_full_defined(const boost::json::object &grid_def)
@@ -991,7 +992,7 @@ void xgrid::create_grid_full_defined(const boost::json::object &grid_def)
         end_price_pips = start_price_pips + cell_types[architecture[i]].first;
         terminal = cell_types[architecture[i]].second;
 
-        gcells_.emplace_back(positions_, start_price_pips, end_price_pips, gnumber++, terminal);
+        gcells_.emplace_back(opened_positions_counter_, positions_, start_price_pips, end_price_pips, gnumber++, terminal);
 
         start_price_pips = end_price_pips;
     }

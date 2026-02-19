@@ -108,6 +108,7 @@ private:
 
     std::vector<gcell> gcells_;
     position_container positions_;
+    int opened_positions_counter_;
     std::shared_ptr<money_management> mmgmnt_;
     invest_guard iguard_;
 

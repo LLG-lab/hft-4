@@ -2,20 +2,20 @@
 #include <algorithm>
 #include <gcell.hpp>
 
-int gcell::active_gcells_ = 0;
-
-gcell::gcell(position_container &positions, int pips_span, int gnumber, bool terminal)
+gcell::gcell(int &opened_positions_counter, position_container &positions, int pips_span, int gnumber, bool terminal)
     : is_terminal_ { terminal },
       positions_ {positions},
+      opened_positions_counter_ {opened_positions_counter},
       gcell_id_ {gnumber}
 {
     trade_min_limit_ = gnumber*pips_span;
     trade_max_limit_ = trade_min_limit_ + pips_span;
 }
 
-gcell::gcell(position_container &positions, int min_limit_pips, int max_limit_pips, int gnumber, bool terminal)
+gcell::gcell(int &opened_positions_counter, position_container &positions, int min_limit_pips, int max_limit_pips, int gnumber, bool terminal)
     : is_terminal_ { terminal },
       positions_ {positions},
+      opened_positions_counter_ {opened_positions_counter},
       gcell_id_ {gnumber}
 {
     trade_min_limit_ = min_limit_pips;
@@ -31,7 +31,7 @@ void gcell::assign_position(position_container::iterator it)
 
         if (it -> position_id_ != "virtual")
         {
-            ++gcell::active_gcells_;
+            ++opened_positions_counter_;
         }
     }
 }
@@ -41,7 +41,7 @@ void gcell::attach_position(const std::string &position_id, double position_volu
     position_container::iterator it = positions_.insert(positions_.end(), position_record(position_id, position_volume, position_time));
     cell_positions_.push_back(it);
     it -> gcell_number_ = gcell_id_;
-    ++gcell::active_gcells_;
+    ++opened_positions_counter_;
 }
 
 void gcell::attach_confirmed_virtual_position(unsigned long position_time, int position_price_pips)
@@ -69,7 +69,7 @@ void gcell::detatch_position(position_container::iterator it)
 
     if (it -> position_id_ != "virtual")
     {
-        --gcell::active_gcells_;
+        --opened_positions_counter_;
     }
 
     cell_positions_.erase(rit);

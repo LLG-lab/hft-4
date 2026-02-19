@@ -9,8 +9,8 @@ class gcell
 public:
 
     gcell(void) = delete;
-    gcell(position_container &positions, int pips_span, int gnumber, bool terminal = false);
-    gcell(position_container &positions, int min_limit_pips, int max_limit_pips, int gnumber, bool terminal);
+    gcell(int &opened_positions_counter, position_container &positions, int pips_span, int gnumber, bool terminal = false);
+    gcell(int &opened_positions_counter, position_container &positions, int min_limit_pips, int max_limit_pips, int gnumber, bool terminal);
     ~gcell(void) = default;
 
     bool has_position(void) const { return !cell_positions_.empty(); }
@@ -35,8 +35,6 @@ public:
 
     int get_id(void) const { return gcell_id_; }
 
-    static int active_cells(void) { return active_gcells_; }
-
 private:
 
     position_container::iterator head_pos(void);
@@ -48,10 +46,10 @@ private:
     int trade_max_limit_;
 
     std::list<position_container::iterator> cell_positions_;
+    int &opened_positions_counter_;
     position_container &positions_;
 
     int gcell_id_;
-    static int active_gcells_;
 };
 
 #endif /* __GCELL_HPP__ */
